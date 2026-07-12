@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// 選手マスタ
+// ============================================================
+
+model Player {
+  id           String   @id @default(cuid())
+  name         String
+  nameKana     String   @default("")
+  jerseyNumber Int
+  imageUrl     String? // Vercel Blob のURL、または data URL (Blob未設定時)
+  isBeginner   Boolean  @default(false)
+  canPlayGk    Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  notes        String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  positions         PlayerPosition[]
+  matchDayPlayers   MatchDayPlayer[]
+  lineupAssignments LineupAssignment[]
+
+  @@unique([jerseyNumber])
+  @@index([isActive])
+}
+
+// ============================================================
+// ポジションマスタ (3-3-1 の 8ポジション)
+// ============================================================
+
+model Position {
+  id        Int    @id @default(autoincrement())
+  code      String @unique // GK, LDF, CDF, RDF, LMF, CMF, RMF, FW
+  name      String // 表示名 (日本語)
+  category  String // GK / DF / MF / FW
+  sortOrder Int
+
+  playerPositions   PlayerPosition[]
+  lineupAssignments LineupAssignment[]
+}
+
+// 選手ごとのポジション適性
+// aptitudeLevel: 3=得意, 2=普通, 1=経験あり, 0=対応不可
+model PlayerPosition {
+  id            String  @id @default(cuid())
+  playerId      String
+  positionId    Int
+  aptitudeLevel Int     @default(0)
+  isAvailable   Boolean @default(false)
+
+  player   Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  position Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, positionId])
+  @@index([positionId])
+}
+
+// ============================================================
+// 試合日
+// ============================================================
+
+model MatchDay {
+  id              String   @id @default(cuid())
+  matchDate       DateTime @db.Date
+  eventName       String   @default("")
+  venue           String   @default("")
+  meetingTime     String   @default("") // "08:30" のような文字列
+  numberOfMatches Int      @default(1)
+  notes           String   @default("")
+  status          String   @default("NOT_GENERATED") // NOT_GENERATED / GENERATED / EDITING / CONFIRMED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  players           MatchDayPlayer[]
+  matches           Match[]
+  generationSetting GenerationSetting?
+  histories         GenerationHistory[]
+
+  @@index([matchDate])
+}
+
+// 試合日ごとの参加選手 (当日限定の上書き情報を持つ)
+model MatchDayPlayer {
+  id               String  @id @default(cuid())
+  matchDayId       String
+  playerId         String
+  attendanceStatus String  @default("PRESENT") // PRESENT / ABSENT / LATE / LEAVE_EARLY / INJURED / SICK
+  isBeginnerOnDay  Boolean @default(false)
+  canPlayGk        Boolean @default(false)
+  canPlay          Boolean @default(true) // 出場不可フラグ (falseで出場不可)
+  maxPlayingSlots  Int? // 出場枠数の上限 (null=無制限)
+  priority         Int     @default(0) // 出場優先度 (大きいほど優先)
+  condition        String  @default("") // 当日の体調メモ
+  notes            String  @default("")
+
+  matchDay MatchDay @relation(fields: [matchDayId], references: [id], onDelete: Cascade)
+  player   Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([matchDayId, playerId])
+  @@index([playerId])
+}
+
+// ============================================================
+// 試合
+// ============================================================
+
+model Match {
+  id           String  @id @default(cuid())
+  matchDayId   String
+  matchNumber  Int
+  opponentName String  @default("")
+  startTime    String  @default("") // "10:00" のような文字列
+  courtName    String  @default("")
+  status       String  @default("SCHEDULED")
+  scoreFor     Int?
+  scoreAgainst Int?
+  notes        String  @default("")
+
+  matchDay MatchDay      @relation(fields: [matchDayId], references: [id], onDelete: Cascade)
+  periods  MatchPeriod[]
+
+  @@unique([matchDayId, matchNumber])
+}
+
+// 試合の時間帯区分 (1試合 = 4区分、各7分30秒 = 450秒)
+model MatchPeriod {
+  id           String @id @default(cuid())
+  matchId      String
+  periodType   String // FIRST_HALF_FIRST / FIRST_HALF_SECOND / SECOND_HALF_FIRST / SECOND_HALF_SECOND
+  periodOrder  Int // 1〜4
+  startSecond  Int // 試合内の開始秒
+  durationSecs Int    @default(450)
+
+  match       Match              @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  assignments LineupAssignment[]
+
+  @@unique([matchId, periodOrder])
+}
+
+// 区分ごとのポジション割り当て
+model LineupAssignment {
+  id             String   @id @default(cuid())
+  matchPeriodId  String
+  playerId       String
+  positionId     Int
+  isLocked       Boolean  @default(false) // 手動固定 (再生成しても変更しない)
+  isManual       Boolean  @default(false) // 手動で配置された
+  generatedScore Float? // 自動編成時の評価点
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  matchPeriod MatchPeriod @relation(fields: [matchPeriodId], references: [id], onDelete: Cascade)
+  player      Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  position    Position    @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@unique([matchPeriodId, positionId]) // 同じ区分に同じポジションは1人
+  @@unique([matchPeriodId, playerId]) // 同じ区分に同じ選手は1回
+  @@index([playerId])
+}
+
+// ============================================================
+// 自動編成設定・履歴
+// ============================================================
+
+model GenerationSetting {
+  id                    String @id @default(cuid())
+  matchDayId            String @unique
+  beginnerLimit         Int    @default(2) // 同一区分の初心者上限
+  fairnessWeight        Int    @default(50) // 出場均等の重み
+  aptitudeWeight        Int    @default(30) // 適性の重み
+  continuityPenalty     Int    @default(20) // 連続出場ペナルティ
+  positionRepeatPenalty Int    @default(10) // 同ポジション連続ペナルティ
+  randomnessWeight      Int    @default(15) // ランダム性の強さ
+  presetType            String @default("FAIRNESS") // FAIRNESS / WIN / DEVELOPMENT / RANDOM
+
+  matchDay MatchDay @relation(fields: [matchDayId], references: [id], onDelete: Cascade)
+}
+
+model GenerationHistory {
+  id             String   @id @default(cuid())
+  matchDayId     String
+  generationSeed Int
+  generationType String // FULL_DAY / MATCH / PERIOD
+  resultSummary  String   @default("")
+  createdAt      DateTime @default(now())
+
+  matchDay MatchDay @relation(fields: [matchDayId], references: [id], onDelete: Cascade)
+
+  @@index([matchDayId])
+}
