@@ -31,7 +31,7 @@ export const playerSchema = z.object({
   defense: abilityLevel.default(0),
   attack: abilityLevel.default(0),
   aptitudes: z
-    .record(z.enum(POSITION_CODES), z.number().int().min(0).max(3))
+    .record(z.enum(POSITION_CODES), z.number().int().min(0).max(5))
     .refine(
       (a) => Object.values(a).some((level) => level > 0),
       "対応可能なポジションを1つ以上設定してください。"

@@ -115,6 +115,16 @@ Vercel ダッシュボード → Storage → Blob でストアを作成し、
 | --- | --- | --- |
 | `DATABASE_URL` | ✅ | PostgreSQL 接続文字列 (Neon 推奨) |
 | `BLOB_READ_WRITE_TOKEN` | - | Vercel Blob のトークン。選手画像の保存先。未設定時はDBに保存 |
+| `APP_PASSWORD` | - | スタッフ共有のログインパスワード。設定すると全ページで認証必須になる |
+| `AUTH_SECRET` | - | Cookie署名用の秘密鍵 (未設定時は `APP_PASSWORD` から導出) |
+
+## ログイン認証
+
+`APP_PASSWORD` を設定すると、全ページ・APIがログイン必須になります (スタッフ共有パスワード方式)。
+
+- ログイン成功でHMAC署名付きのHttpOnly Cookieが発行され、30日間有効です
+- ログアウトはヘッダー右上の 🔓 ボタンから行えます
+- `APP_PASSWORD` 未設定の場合は認証なしで動作します (ローカル開発向け)
 
 ## DBテーブル
 

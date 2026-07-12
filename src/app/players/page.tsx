@@ -109,11 +109,13 @@ export default async function PlayersPage({
                       <span
                         key={pp.id}
                         className={`rounded px-1.5 py-0.5 text-xs font-bold ${
-                          pp.aptitudeLevel >= 3
-                            ? "bg-emerald-100 text-emerald-700"
-                            : pp.aptitudeLevel === 2
-                              ? "bg-emerald-50 text-emerald-600"
-                              : "bg-slate-100 text-slate-500"
+                          pp.aptitudeLevel >= 4
+                            ? "bg-emerald-200 text-emerald-900"
+                            : pp.aptitudeLevel === 3
+                              ? "bg-emerald-100 text-emerald-700"
+                              : pp.aptitudeLevel === 2
+                                ? "bg-emerald-50 text-emerald-600"
+                                : "bg-slate-100 text-slate-500"
                         }`}
                       >
                         {pp.position.code}

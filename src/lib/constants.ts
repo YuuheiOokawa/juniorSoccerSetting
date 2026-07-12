@@ -35,12 +35,25 @@ export const CATEGORY_LABEL: Record<string, string> = {
   FW: "FW",
 };
 
-// 適性レベル
+// 適性レベル (0=対応不可、数字が大きいほど適性が高い)
+// 既存データとの互換のため 1〜3 の意味は変えず、上位の 4・5 を追加している
+export const APTITUDE_MAX = 5;
 export const APTITUDE_LABELS: Record<number, string> = {
+  5: "最適",
+  4: "かなり得意",
   3: "得意",
   2: "普通",
   1: "経験あり",
   0: "対応不可",
+};
+// ボタン表示用の短いラベル
+export const APTITUDE_SHORT_LABELS: Record<number, string> = {
+  5: "◎+",
+  4: "◎",
+  3: "○",
+  2: "△",
+  1: "▲",
+  0: "×",
 };
 
 // 時間帯区分 (1試合 = 4区分、各450秒 = 7分30秒)

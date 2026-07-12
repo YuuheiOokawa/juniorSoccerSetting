@@ -247,8 +247,8 @@ function scoreCandidate(
   const deficit = targetSlots - state.slotsPlayed;
   score += deficit * config.fairnessWeight;
 
-  // 加点: ポジション適性 (0〜3)
-  score += (player.aptitudes[positionCode] / 3) * config.aptitudeWeight;
+  // 加点: ポジション適性 (0〜5)
+  score += (player.aptitudes[positionCode] / 5) * config.aptitudeWeight;
 
   // 加点: 直前の区分で休んでいた
   const restedLastPeriod = state.lastGlobalOrder < currentGlobalOrder - 1;
