@@ -32,8 +32,8 @@ export async function createBoardPost(input: unknown): Promise<ActionResult> {
     data.formationKey && data.formationAssignments
       ? JSON.stringify(
           Object.fromEntries(
-            Object.entries(data.formationAssignments).filter(
-              ([, name]) => name && name.length > 0
+            Object.entries(data.formationAssignments).filter(([, v]) =>
+              typeof v === "string" ? v.length > 0 : Boolean(v?.label)
             )
           )
         )

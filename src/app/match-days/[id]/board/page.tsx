@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { BoardPanel } from "@/components/BoardPanel";
+import { resolvePostFormations } from "@/server/boardData";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,8 @@ export default async function MatchDayBoardPage({
     },
   });
   if (!matchDay) notFound();
+
+  const formationsByPost = await resolvePostFormations(matchDay.boardPosts);
 
   return (
     <div className="space-y-4">
@@ -54,6 +57,7 @@ export default async function MatchDayBoardPage({
           .map((mdp) => ({
             playerId: mdp.playerId,
             label: `${mdp.player.jerseyNumber} ${mdp.player.name}`,
+            imageUrl: mdp.player.imageUrl,
           }))}
         posts={matchDay.boardPosts.map((p) => ({
           id: p.id,
@@ -66,9 +70,7 @@ export default async function MatchDayBoardPage({
             minute: "2-digit",
           }),
           formationKey: p.formationKey,
-          formationAssignments: p.formationData
-            ? (JSON.parse(p.formationData) as Record<string, string>)
-            : null,
+          formationAssignments: formationsByPost.get(p.id) ?? null,
         }))}
       />
     </div>

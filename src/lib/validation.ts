@@ -169,7 +169,16 @@ export const boardPostSchema = z
       .nullable()
       .optional(),
     formationAssignments: z
-      .record(z.enum(POSITION_CODES), z.string().trim().max(30))
+      .record(
+        z.enum(POSITION_CODES),
+        z.union([
+          z.string().trim().max(30), // 旧形式 (表示名のみ)
+          z.object({
+            playerId: z.string().max(40),
+            label: z.string().trim().min(1).max(30),
+          }),
+        ])
+      )
       .nullable()
       .optional(),
   })
