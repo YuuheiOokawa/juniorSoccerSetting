@@ -15,7 +15,14 @@ export default async function MatchDayBoardPage({
   const matchDay = await prisma.matchDay.findUnique({
     where: { id },
     include: {
-      boardPosts: { orderBy: { createdAt: "desc" }, take: 100 },
+      boardPosts: {
+        orderBy: { createdAt: "desc" },
+        take: 100,
+        include: {
+          comments: { orderBy: { createdAt: "asc" } },
+          reactions: true,
+        },
+      },
       players: {
         include: { player: true },
         orderBy: { player: { jerseyNumber: "asc" } },
@@ -71,6 +78,25 @@ export default async function MatchDayBoardPage({
           }),
           formationKey: p.formationKey,
           formationAssignments: formationsByPost.get(p.id) ?? null,
+          comments: (p.comments ?? []).map((c) => ({
+            id: c.id,
+            authorName: c.authorName,
+            body: c.body,
+            createdAt: c.createdAt.toLocaleString("ja-JP", {
+              month: "numeric",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          })),
+          reactions: Object.fromEntries(
+            Object.entries(
+              (p.reactions ?? []).reduce<Record<string, number>>((acc, r) => {
+                acc[r.emoji] = (acc[r.emoji] ?? 0) + 1;
+                return acc;
+              }, {})
+            )
+          ),
         }))}
       />
     </div>
