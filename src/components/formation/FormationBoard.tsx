@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import {
   PERIOD_SHORT_LABELS,
   POSITION_CODES,
@@ -52,6 +52,39 @@ type Selection =
   | { type: "bench"; playerId: string }
   | null;
 
+// ドロップ先 (data-drop属性でヒットテストする)
+type DropTarget =
+  | { type: "court"; positionCode: PositionCode }
+  | { type: "bench"; playerId: string }
+  | { type: "bench-area" }
+  | null;
+
+// ドラッグ中の状態
+interface DragState {
+  source: NonNullable<Selection>;
+  playerId: string;
+  startX: number;
+  startY: number;
+  x: number;
+  y: number;
+  active: boolean; // 閾値を超えて実際にドラッグ中か (falseならタップ扱い)
+}
+
+const DRAG_THRESHOLD_PX = 8;
+
+function parseDropTarget(el: Element | null): DropTarget {
+  const dropEl = el?.closest("[data-drop]");
+  const value = dropEl?.getAttribute("data-drop");
+  if (!value) return null;
+  if (value === "bench-area") return { type: "bench-area" };
+  const [kind, key] = value.split(":");
+  if (kind === "court") {
+    return { type: "court", positionCode: key as PositionCode };
+  }
+  if (kind === "bench") return { type: "bench", playerId: key };
+  return null;
+}
+
 // コート上の配置座標 (3-3-1、縦向き、% 指定)
 const COURT_LAYOUT: Record<PositionCode, { x: number; y: number }> = {
   FW: { x: 50, y: 12 },
@@ -90,6 +123,9 @@ export function FormationBoard({
   const [status, setStatus] = useState(initialStatus);
   const [dirty, setDirty] = useState(false);
   const [selection, setSelection] = useState<Selection>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const [hoverTarget, setHoverTarget] = useState<DropTarget>(null);
+  const dragRef = useRef<DragState | null>(null);
   const [matchIndex, setMatchIndex] = useState(0);
   const [periodIndex, setPeriodIndex] = useState(0);
   const [messages, setMessages] = useState<{ type: "error" | "warn" | "ok"; text: string }[]>([]);
@@ -266,6 +302,169 @@ export function FormationBoard({
           : x
       )
     );
+  };
+
+  // ---- ドラッグ&ドロップ ----
+
+  const performDrop = (source: NonNullable<Selection>, target: DropTarget) => {
+    if (!target || readonly || !currentPeriod) return;
+
+    if (source.type === "court") {
+      const sourceAssignment = periodAssignments.find(
+        (a) => a.positionCode === source.positionCode
+      );
+      if (!sourceAssignment) return;
+
+      if (target.type === "court") {
+        // コート内: 選手を入れ替え (空きポジションなら移動)
+        if (target.positionCode === source.positionCode) return;
+        const targetAssignment = periodAssignments.find(
+          (a) => a.positionCode === target.positionCode
+        );
+        mutate((list) =>
+          list.map((x) => {
+            if (x.periodId !== currentPeriod.id) return x;
+            if (x.positionCode === source.positionCode) {
+              return targetAssignment
+                ? {
+                    ...x,
+                    playerId: targetAssignment.playerId,
+                    isManual: true,
+                    isLocked: false,
+                  }
+                : {
+                    ...x,
+                    positionCode: target.positionCode,
+                    isManual: true,
+                    isLocked: false,
+                  };
+            }
+            if (x.positionCode === target.positionCode && targetAssignment) {
+              return {
+                ...x,
+                playerId: sourceAssignment.playerId,
+                isManual: true,
+                isLocked: false,
+              };
+            }
+            return x;
+          })
+        );
+      } else if (target.type === "bench") {
+        // 控え選手カードへドロップ: その控え選手と交代
+        mutate((list) =>
+          list.map((x) =>
+            x.periodId === currentPeriod.id &&
+            x.positionCode === source.positionCode
+              ? { ...x, playerId: target.playerId, isManual: true, isLocked: false }
+              : x
+          )
+        );
+      } else {
+        // 控えエリアへドロップ: ポジションから外す (空きスロットになる)
+        mutate((list) =>
+          list.filter(
+            (x) =>
+              !(
+                x.periodId === currentPeriod.id &&
+                x.positionCode === source.positionCode
+              )
+          )
+        );
+      }
+    } else if (target.type === "court") {
+      // 控え選手 → コートのポジション (交代または空きへ配置)
+      mutate((list) => {
+        const idx = list.findIndex(
+          (x) =>
+            x.periodId === currentPeriod.id &&
+            x.positionCode === target.positionCode
+        );
+        if (idx >= 0) {
+          list[idx] = {
+            ...list[idx],
+            playerId: source.playerId,
+            isManual: true,
+            isLocked: false,
+          };
+        } else {
+          list.push({
+            periodId: currentPeriod.id,
+            positionCode: target.positionCode,
+            playerId: source.playerId,
+            isLocked: false,
+            isManual: true,
+          });
+        }
+        return list;
+      });
+    }
+  };
+
+  // カード上でポインターを押した時。playerId が null (空きポジション) の
+  // 場合はドラッグせずタップのみ受け付ける。
+  const handlePointerDown = (
+    e: React.PointerEvent,
+    source: NonNullable<Selection>,
+    playerId: string | null
+  ) => {
+    if (readonly) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const d: DragState = {
+      source,
+      playerId: playerId ?? "",
+      startX: e.clientX,
+      startY: e.clientY,
+      x: e.clientX,
+      y: e.clientY,
+      active: false,
+    };
+    dragRef.current = d;
+    setDrag(d);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    if (!d.active) {
+      // 空きポジションはドラッグ不可
+      if (!d.playerId) return;
+      const dist = Math.hypot(e.clientX - d.startX, e.clientY - d.startY);
+      if (dist < DRAG_THRESHOLD_PX) return;
+      d.active = true;
+    }
+    d.x = e.clientX;
+    d.y = e.clientY;
+    setDrag({ ...d });
+    // ゴーストは pointer-events: none のためヒットテストを妨げない
+    setHoverTarget(
+      parseDropTarget(document.elementFromPoint(e.clientX, e.clientY))
+    );
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    setDrag(null);
+    setHoverTarget(null);
+    if (!d) return;
+    if (d.active) {
+      performDrop(
+        d.source,
+        parseDropTarget(document.elementFromPoint(e.clientX, e.clientY))
+      );
+      setSelection(null);
+    } else {
+      // 動かさず離した場合は従来どおりタップとして扱う
+      if (d.source.type === "court") handleCourtTap(d.source.positionCode);
+      else handleBenchTap(d.source.playerId);
+    }
+  };
+
+  const handlePointerCancel = () => {
+    dragRef.current = null;
+    setDrag(null);
+    setHoverTarget(null);
   };
 
   // ---- サーバー操作 ----
@@ -489,16 +688,38 @@ export function FormationBoard({
             const player = assignment ? playerMap.get(assignment.playerId) : null;
             const isSelected =
               selection?.type === "court" && selection.positionCode === code;
+            const isDropHover =
+              drag?.active &&
+              hoverTarget?.type === "court" &&
+              hoverTarget.positionCode === code;
+            const isDragSource =
+              drag?.active &&
+              drag.source.type === "court" &&
+              drag.source.positionCode === code;
             return (
               <button
                 key={code}
-                onClick={() => handleCourtTap(code)}
-                className={`absolute w-[88px] -translate-x-1/2 -translate-y-1/2 rounded-xl p-1.5 text-center transition sm:w-24 ${
-                  isSelected
-                    ? "bg-yellow-300 ring-4 ring-yellow-400"
-                    : assignment
-                      ? "bg-white/95 hover:bg-white"
-                      : "border-2 border-dashed border-white/70 bg-white/20 text-white"
+                data-drop={`court:${code}`}
+                onPointerDown={(e) =>
+                  handlePointerDown(
+                    e,
+                    { type: "court", positionCode: code },
+                    assignment?.playerId ?? null
+                  )
+                }
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerCancel}
+                className={`absolute w-[88px] -translate-x-1/2 -translate-y-1/2 touch-none select-none rounded-xl p-1.5 text-center transition sm:w-24 ${
+                  isDragSource ? "opacity-40 " : ""
+                }${
+                  isDropHover
+                    ? "bg-sky-200 ring-4 ring-sky-400"
+                    : isSelected
+                      ? "bg-yellow-300 ring-4 ring-yellow-400"
+                      : assignment
+                        ? "bg-white/95 hover:bg-white"
+                        : "border-2 border-dashed border-white/70 bg-white/20 text-white"
                 }`}
                 style={{ left: `${layout.x}%`, top: `${layout.y}%` }}
               >
@@ -553,7 +774,16 @@ export function FormationBoard({
             </div>
           )}
 
-          <div className="card">
+          <div
+            data-drop="bench-area"
+            className={`card ${
+              drag?.active &&
+              drag.source.type === "court" &&
+              hoverTarget?.type === "bench-area"
+                ? "ring-4 ring-sky-400"
+                : ""
+            }`}
+          >
             <h2 className="font-bold">
               控え選手 ({benchPlayers.length}人)
               <span className="ml-2 text-xs font-normal text-slate-500">
@@ -569,17 +799,40 @@ export function FormationBoard({
                   const needsPlay = slots < avgSlots - 0.5;
                   const isSelected =
                     selection?.type === "bench" && selection.playerId === p.playerId;
+                  const isDropHover =
+                    drag?.active &&
+                    drag.source.type === "court" &&
+                    hoverTarget?.type === "bench" &&
+                    hoverTarget.playerId === p.playerId;
+                  const isDragSource =
+                    drag?.active &&
+                    drag.source.type === "bench" &&
+                    drag.source.playerId === p.playerId;
                   return (
                     <li key={p.playerId}>
                       <button
-                        onClick={() => handleBenchTap(p.playerId)}
+                        data-drop={`bench:${p.playerId}`}
+                        onPointerDown={(e) =>
+                          handlePointerDown(
+                            e,
+                            { type: "bench", playerId: p.playerId },
+                            p.playerId
+                          )
+                        }
+                        onPointerMove={handlePointerMove}
+                        onPointerUp={handlePointerUp}
+                        onPointerCancel={handlePointerCancel}
                         disabled={readonly}
-                        className={`flex w-full items-center gap-2 rounded-lg border-2 p-1.5 text-left ${
-                          isSelected
-                            ? "border-yellow-400 bg-yellow-100"
-                            : needsPlay
-                              ? "border-orange-300 bg-orange-50"
-                              : "border-slate-200 bg-white"
+                        className={`flex w-full touch-none select-none items-center gap-2 rounded-lg border-2 p-1.5 text-left ${
+                          isDragSource ? "opacity-40 " : ""
+                        }${
+                          isDropHover
+                            ? "border-sky-400 bg-sky-100"
+                            : isSelected
+                              ? "border-yellow-400 bg-yellow-100"
+                              : needsPlay
+                                ? "border-orange-300 bg-orange-50"
+                                : "border-slate-200 bg-white"
                         }`}
                       >
                         <PlayerAvatar imageUrl={p.imageUrl} name={p.name} size={32} />
@@ -604,7 +857,9 @@ export function FormationBoard({
               </ul>
             )}
             <p className="mt-2 text-xs text-slate-400">
-              コートの選手 → 控えの順にタップすると交代できます。
+              選手カードをドラッグしてポジションへドロップすると入れ替え・交代できます
+              (タップで選択→タップでも可)。コートの選手をこのエリアへドロップすると
+              ポジションから外せます。
             </p>
           </div>
         </div>
@@ -695,6 +950,28 @@ export function FormationBoard({
           </div>
         )}
       </div>
+
+      {/* ドラッグ中のゴースト表示 */}
+      {drag?.active &&
+        (() => {
+          const p = playerMap.get(drag.playerId);
+          if (!p) return null;
+          return (
+            <div
+              className="pointer-events-none fixed z-50 flex items-center gap-1.5 rounded-lg bg-white px-2 py-1.5 shadow-xl ring-2 ring-emerald-500"
+              style={{
+                left: drag.x,
+                top: drag.y,
+                transform: "translate(-50%, -120%)",
+              }}
+            >
+              <PlayerAvatar imageUrl={p.imageUrl} name={p.name} size={28} />
+              <span className="text-sm font-bold">
+                {p.jerseyNumber} {p.name}
+              </span>
+            </div>
+          );
+        })()}
     </div>
   );
 }
