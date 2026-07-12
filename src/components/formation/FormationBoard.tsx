@@ -32,6 +32,16 @@ export interface BoardPlayer {
   canPlay: boolean;
   maxPlayingSlots: number | null;
   priority: number;
+  overall: number | null; // 能力値から算出した総合値 (未設定はnull)
+}
+
+// 総合値バッジ (金/銀/銅) の配色
+function ratingClass(overall: number): string {
+  if (overall >= 80)
+    return "bg-gradient-to-b from-yellow-200 via-amber-400 to-amber-600 text-amber-950";
+  if (overall >= 60)
+    return "bg-gradient-to-b from-slate-100 via-slate-300 to-slate-500 to-90% text-slate-800";
+  return "bg-gradient-to-b from-orange-200 via-orange-400 to-orange-600 text-orange-950";
 }
 
 export interface BoardMatch {
@@ -661,20 +671,89 @@ export function FormationBoard({
       </div>
 
       <div className="gap-3 lg:grid lg:grid-cols-[1fr_320px]">
-        {/* サッカーコート */}
-        <div
-          className="relative mx-auto aspect-[3/4] w-full max-w-md rounded-xl border-4 border-white bg-gradient-to-b from-emerald-600 to-emerald-700 shadow-lg"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 40px, transparent 40px 80px)",
-          }}
-        >
-          {/* コートのライン */}
-          <div className="pointer-events-none absolute inset-2 rounded-lg border-2 border-white/50" />
-          <div className="pointer-events-none absolute left-1/2 top-2 h-[calc(50%-0.5rem)] w-0 border-l-2 border-white/0" />
-          <div className="pointer-events-none absolute left-1/4 right-1/4 top-2 h-10 rounded-b-lg border-2 border-t-0 border-white/50" />
-          <div className="pointer-events-none absolute bottom-2 left-1/4 right-1/4 h-14 rounded-t-lg border-2 border-b-0 border-white/50" />
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/50" />
+        {/* サッカーコート (スタジアム風) */}
+        <div className="relative mx-auto aspect-[3/4] w-full max-w-md overflow-hidden rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.45)] ring-4 ring-slate-900/70">
+          <svg
+            className="pointer-events-none absolute inset-0 h-full w-full"
+            viewBox="0 0 300 400"
+            preserveAspectRatio="none"
+            aria-hidden
+          >
+            <defs>
+              <linearGradient id="grassBase" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#3fae52" />
+                <stop offset="55%" stopColor="#2c9142" />
+                <stop offset="100%" stopColor="#1c6e30" />
+              </linearGradient>
+              <radialGradient id="stadiumLight" cx="50%" cy="30%" r="80%">
+                <stop offset="0%" stopColor="rgba(255,255,255,0.22)" />
+                <stop offset="55%" stopColor="rgba(255,255,255,0.05)" />
+                <stop offset="100%" stopColor="rgba(0,0,0,0.28)" />
+              </radialGradient>
+            </defs>
+
+            {/* 芝 + 刈り込み模様 (横縞と薄い縦縞) */}
+            <rect width="300" height="400" fill="url(#grassBase)" />
+            {Array.from({ length: 5 }, (_, i) => (
+              <rect
+                key={`h${i}`}
+                x="0"
+                y={i * 80}
+                width="300"
+                height="40"
+                fill="rgba(255,255,255,0.06)"
+              />
+            ))}
+            {Array.from({ length: 4 }, (_, i) => (
+              <rect
+                key={`v${i}`}
+                x={i * 75}
+                y="0"
+                width="37.5"
+                height="400"
+                fill="rgba(0,0,0,0.045)"
+              />
+            ))}
+
+            {/* ライン */}
+            <g
+              fill="none"
+              stroke="rgba(255,255,255,0.85)"
+              strokeWidth="2"
+              strokeLinejoin="round"
+            >
+              <rect x="10" y="10" width="280" height="380" rx="2" />
+              <line x1="10" y1="200" x2="290" y2="200" />
+              <circle cx="150" cy="200" r="36" />
+              {/* 上側 (相手陣) ペナルティエリア */}
+              <rect x="70" y="10" width="160" height="52" />
+              <rect x="112" y="10" width="76" height="20" />
+              <path d="M 116 62 A 34 34 0 0 0 184 62" />
+              {/* 下側 (自陣) ペナルティエリア */}
+              <rect x="70" y="338" width="160" height="52" />
+              <rect x="112" y="370" width="76" height="20" />
+              <path d="M 116 338 A 34 34 0 0 1 184 338" />
+              {/* コーナーアーク */}
+              <path d="M 10 18 A 8 8 0 0 0 18 10" />
+              <path d="M 282 10 A 8 8 0 0 0 290 18" />
+              <path d="M 10 382 A 8 8 0 0 1 18 390" />
+              <path d="M 282 390 A 8 8 0 0 1 290 382" />
+            </g>
+            {/* スポット */}
+            <g fill="rgba(255,255,255,0.85)">
+              <circle cx="150" cy="200" r="2.5" />
+              <circle cx="150" cy="48" r="2.5" />
+              <circle cx="150" cy="352" r="2.5" />
+            </g>
+            {/* ゴール */}
+            <g fill="rgba(255,255,255,0.35)" stroke="rgba(255,255,255,0.8)" strokeWidth="1.5">
+              <rect x="126" y="4" width="48" height="6" />
+              <rect x="126" y="390" width="48" height="6" />
+            </g>
+
+            {/* スタジアム照明のグラデーション */}
+            <rect width="300" height="400" fill="url(#stadiumLight)" />
+          </svg>
 
           {formation.positions.map((code) => {
             const layout = formation.layout[code] ?? { x: 50, y: 50 };
@@ -719,42 +798,53 @@ export function FormationBoard({
                 style={{ left: `${layout.x}%`, top: `${layout.y}%` }}
               >
                 {player ? (
-                  // ウイイレ風の選手カード
-                  <div className="relative flex flex-col items-center rounded-xl bg-gradient-to-b from-slate-700 via-slate-900 to-black px-1 pb-1 pt-2 shadow-lg ring-1 ring-white/25">
+                  // ウイイレ風の選手カード (金縁 + 光沢)
+                  <div className="relative flex flex-col items-center overflow-visible rounded-xl bg-gradient-to-b from-slate-600 via-slate-900 to-black px-1 pb-1 pt-2 shadow-[0_6px_14px_rgba(0,0,0,0.5)] ring-1 ring-amber-300/50">
+                    {/* 光沢ハイライト */}
+                    <span className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 via-transparent to-transparent" />
                     <span
-                      className={`absolute -left-1 -top-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-black shadow ${colors.badge}`}
+                      className={`absolute -left-1.5 -top-2 rounded-md px-1.5 py-0.5 text-[10px] font-black shadow-md ring-1 ring-white/50 ${colors.badge}`}
                     >
                       {code}
                     </span>
                     {(assignment?.isLocked ||
                       (assignment?.isManual && !assignment.isLocked)) && (
-                      <span className="absolute -right-1 -top-1.5 rounded-full bg-white/90 px-1 text-[11px] shadow">
+                      <span className="absolute -right-1.5 -top-2 rounded-full bg-white/95 px-1 text-[11px] shadow-md ring-1 ring-slate-300">
                         {assignment.isLocked ? "🔒" : "✋"}
                       </span>
                     )}
-                    <PlayerAvatar
-                      imageUrl={player.imageUrl}
-                      name={player.name}
-                      size={38}
-                      className={`ring-2 ${colors.ring}`}
-                    />
-                    <div className="mt-0.5 flex w-full items-center justify-center gap-1">
-                      <span className="font-mono text-[11px] font-black text-amber-300">
+                    <span className="relative">
+                      <PlayerAvatar
+                        imageUrl={player.imageUrl}
+                        name={player.name}
+                        size={40}
+                        className={`ring-2 shadow-[0_0_10px_rgba(255,255,255,0.25)] ${colors.ring}`}
+                      />
+                      {player.overall != null && (
+                        <span
+                          className={`absolute -bottom-1 -right-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full text-[9px] font-black shadow ring-1 ring-white/80 ${ratingClass(player.overall)}`}
+                        >
+                          {player.overall}
+                        </span>
+                      )}
+                    </span>
+                    <div className="mt-1 flex w-full items-center justify-center gap-1 rounded-md bg-black/40 px-0.5">
+                      <span className="font-mono text-[11px] font-black text-amber-300 drop-shadow">
                         {player.jerseyNumber}
                       </span>
-                      <span className="max-w-[62px] truncate text-[11px] font-bold text-white">
+                      <span className="max-w-[58px] truncate text-[11px] font-bold text-white drop-shadow">
                         {player.name}
                       </span>
                       {player.isBeginner && <span className="text-[9px]">🔰</span>}
                     </div>
-                    <div className="text-[9px] leading-tight text-slate-300">
+                    <div className="text-[9px] leading-tight text-emerald-200/90">
                       {formatSlots(slotCounts.get(player.playerId) ?? 0)}
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-xl border-2 border-dashed border-white/70 bg-white/15 px-1 py-3 text-white">
-                    <div className="text-[10px] font-black">{code}</div>
-                    <div className="text-xs font-bold">タップで配置</div>
+                  <div className="rounded-xl border-2 border-dashed border-white/80 bg-white/15 px-1 py-3 text-white shadow-inner backdrop-blur-[1px]">
+                    <div className="text-[10px] font-black drop-shadow">{code}</div>
+                    <div className="text-xs font-bold drop-shadow">タップで配置</div>
                   </div>
                 )}
               </button>
@@ -846,12 +936,21 @@ export function FormationBoard({
                                 : "bg-gradient-to-r from-slate-700 to-slate-900 ring-white/20"
                         }`}
                       >
-                        <PlayerAvatar
-                          imageUrl={p.imageUrl}
-                          name={p.name}
-                          size={32}
-                          className="ring-2 ring-white/40"
-                        />
+                        <span className="relative shrink-0">
+                          <PlayerAvatar
+                            imageUrl={p.imageUrl}
+                            name={p.name}
+                            size={32}
+                            className="ring-2 ring-white/40"
+                          />
+                          {p.overall != null && (
+                            <span
+                              className={`absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-black shadow ring-1 ring-white/80 ${ratingClass(p.overall)}`}
+                            >
+                              {p.overall}
+                            </span>
+                          )}
+                        </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-bold text-white">
                             <span className="mr-1 font-mono font-black text-amber-300">
