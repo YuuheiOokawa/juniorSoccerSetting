@@ -56,9 +56,55 @@ export default async function DashboardPage() {
     (d) => d.status !== "CONFIRMED" && d.status !== "NOT_GENERATED"
   );
 
+  // クイックメニューの遷移先: 次回の試合日、なければ直近の試合日
+  const targetMatchDay = nextMatchDay ?? recentMatchDays[0] ?? null;
+
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">ダッシュボード</h1>
+
+      {/* クイックメニュー */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {targetMatchDay ? (
+          <Link
+            href={`/match-days/${targetMatchDay.id}/formation`}
+            className="btn-primary flex-col !gap-0.5 !py-3"
+          >
+            <span className="text-2xl leading-none">⚽</span>
+            <span>フォーメーション</span>
+            <span className="text-[10px] font-normal opacity-90">
+              {targetMatchDay.matchDate.toLocaleDateString("ja-JP", {
+                month: "numeric",
+                day: "numeric",
+              })}
+              の試合日
+            </span>
+          </Link>
+        ) : (
+          <Link
+            href="/match-days/new"
+            className="btn-primary flex-col !gap-0.5 !py-3"
+          >
+            <span className="text-2xl leading-none">⚽</span>
+            <span>フォーメーション</span>
+            <span className="text-[10px] font-normal opacity-90">
+              まず試合日を作成
+            </span>
+          </Link>
+        )}
+        <Link href="/match-days/new" className="btn-secondary flex-col !gap-0.5 !py-3">
+          <span className="text-2xl leading-none">📅</span>
+          <span>試合日を作成</span>
+        </Link>
+        <Link href="/players/new" className="btn-secondary flex-col !gap-0.5 !py-3">
+          <span className="text-2xl leading-none">👤</span>
+          <span>選手を登録</span>
+        </Link>
+        <Link href="/boards" className="btn-secondary flex-col !gap-0.5 !py-3">
+          <span className="text-2xl leading-none">💬</span>
+          <span>掲示板</span>
+        </Link>
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="card">
