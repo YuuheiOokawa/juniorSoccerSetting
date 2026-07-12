@@ -207,6 +207,72 @@ export async function updateFormationAction(
   return { ok: true };
 }
 
+// 試合日のコピー: 参加メンバー・フォーメーション・編成設定を引き継いで
+// 新しい日付の試合日を作成する (編成・出欠などの当日情報はリセット)
+export async function duplicateMatchDay(
+  matchDayId: string,
+  newDate: string
+): Promise<ActionResult> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+    return { ok: false, error: "日付を入力してください。" };
+  }
+
+  const source = await prisma.matchDay.findUnique({
+    where: { id: matchDayId },
+    include: { players: true, generationSetting: true },
+  });
+  if (!source) return { ok: false, error: "試合日が見つかりません。" };
+
+  const setting = source.generationSetting;
+  const created = await prisma.matchDay.create({
+    data: {
+      matchDate: new Date(newDate),
+      eventName: source.eventName,
+      venue: source.venue,
+      meetingTime: source.meetingTime,
+      numberOfMatches: source.numberOfMatches,
+      formation: source.formation,
+      notes: source.notes,
+      matches: {
+        create: Array.from({ length: source.numberOfMatches }, (_, i) => ({
+          matchNumber: i + 1,
+          periods: { create: buildPeriods() },
+        })),
+      },
+      generationSetting: {
+        create: setting
+          ? {
+              beginnerLimit: setting.beginnerLimit,
+              fairnessWeight: setting.fairnessWeight,
+              aptitudeWeight: setting.aptitudeWeight,
+              continuityPenalty: setting.continuityPenalty,
+              positionRepeatPenalty: setting.positionRepeatPenalty,
+              randomnessWeight: setting.randomnessWeight,
+              presetType: setting.presetType,
+            }
+          : {},
+      },
+    },
+  });
+
+  if (source.players.length > 0) {
+    await prisma.matchDayPlayer.createMany({
+      data: source.players.map((p) => ({
+        matchDayId: created.id,
+        playerId: p.playerId,
+        // 出欠・優先度などの当日情報はリセットし、
+        // 初心者扱いとGK可否は引き継ぐ
+        isBeginnerOnDay: p.isBeginnerOnDay,
+        canPlayGk: p.canPlayGk,
+      })),
+    });
+  }
+
+  revalidatePath("/match-days");
+  revalidatePath("/");
+  return { ok: true, id: created.id };
+}
+
 export async function deleteMatchDay(matchDayId: string): Promise<ActionResult> {
   const existing = await prisma.matchDay.findUnique({ where: { id: matchDayId } });
   if (!existing) return { ok: false, error: "試合日が見つかりません。" };
