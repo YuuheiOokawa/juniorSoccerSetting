@@ -79,25 +79,27 @@ npx next lint                         # ESLint
 
 1. [Neon](https://neon.tech) でアカウントを作成し、新しいプロジェクトを作成
 2. ダッシュボードの「Connection Details」から接続文字列をコピー
-   (例: `postgresql://user:pass@ep-xxxx.ap-southeast-1.aws.neon.tech/neondb?sslmode=require`)
+   (例: `postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech/neondb?sslmode=require`)
 3. `.env` (ローカル) または Vercel の環境変数に `DATABASE_URL` として設定
-4. マイグレーションを適用:
+
+テーブル作成 (マイグレーション) は **Vercel デプロイ時に自動で実行されます**
+(`vercel-build` スクリプトに `prisma migrate deploy` を含めています)。
+ポジションマスタ (GK〜FW の8件) もマイグレーションに含まれているため、
+手動での初期データ投入は不要です。
+
+手元から適用したい場合は次の1コマンドでも可能です:
 
 ```bash
 DATABASE_URL="<Neonの接続文字列>" npx prisma migrate deploy
-DATABASE_URL="<Neonの接続文字列>" npx prisma db seed   # 初期データ (任意)
+DATABASE_URL="<Neonの接続文字列>" npx prisma db seed   # ダミー選手15人 (任意・開発確認用)
 ```
 
 ## Vercel へのデプロイ方法
 
 1. このリポジトリを GitHub に push し、[Vercel](https://vercel.com) でインポート
-2. 環境変数を設定 (下記参照)
-3. デプロイを実行 (`npm run build` に `prisma generate` が含まれています)
-4. 初回のみマイグレーションを適用:
-
-```bash
-DATABASE_URL="<Neonの接続文字列>" npx prisma migrate deploy
-```
+2. 環境変数 `DATABASE_URL` (Neonの接続文字列) を設定
+3. デプロイを実行 — ビルド時に `prisma migrate deploy` が自動実行され、
+   テーブル作成とポジションマスタ投入まで完了します
 
 ### 選手画像の保存 (Vercel Blob)
 
