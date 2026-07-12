@@ -16,7 +16,9 @@
   - GK対応者をGKに優先配置
 - **手動編集**: タップで選手入れ替え・交代、固定 (🔒)、区分/試合/1日単位の再生成、元に戻す
 - **出場時間集計**: 区分数・時間・試合別・ポジション別・連続出場・平均との差
-- **履歴**: 過去の試合日・確定済み編成の閲覧
+- **履歴**: 過去の試合日・確定済み編成の閲覧、試合結果 (勝/負/分) の表示
+- **CSV出力**: 選手一覧・当日メンバー表・出場時間集計 (Excel対応のBOM付きUTF-8)
+- **メンバー表の印刷・共有**: 全試合×4区分の一覧表 (A4印刷対応)、PNG画像の保存・Web Share APIによるLINE等への共有
 - **スマートフォン対応**: 縦向きコート表示、ボトムナビゲーション
 
 ## 技術構成
@@ -77,25 +79,27 @@ npx next lint                         # ESLint
 
 1. [Neon](https://neon.tech) でアカウントを作成し、新しいプロジェクトを作成
 2. ダッシュボードの「Connection Details」から接続文字列をコピー
-   (例: `postgresql://user:pass@ep-xxxx.ap-southeast-1.aws.neon.tech/neondb?sslmode=require`)
+   (例: `postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech/neondb?sslmode=require`)
 3. `.env` (ローカル) または Vercel の環境変数に `DATABASE_URL` として設定
-4. マイグレーションを適用:
+
+テーブル作成 (マイグレーション) は **Vercel デプロイ時に自動で実行されます**
+(`vercel-build` スクリプトに `prisma migrate deploy` を含めています)。
+ポジションマスタ (GK〜FW の8件) もマイグレーションに含まれているため、
+手動での初期データ投入は不要です。
+
+手元から適用したい場合は次の1コマンドでも可能です:
 
 ```bash
 DATABASE_URL="<Neonの接続文字列>" npx prisma migrate deploy
-DATABASE_URL="<Neonの接続文字列>" npx prisma db seed   # 初期データ (任意)
+DATABASE_URL="<Neonの接続文字列>" npx prisma db seed   # ダミー選手15人 (任意・開発確認用)
 ```
 
 ## Vercel へのデプロイ方法
 
 1. このリポジトリを GitHub に push し、[Vercel](https://vercel.com) でインポート
-2. 環境変数を設定 (下記参照)
-3. デプロイを実行 (`npm run build` に `prisma generate` が含まれています)
-4. 初回のみマイグレーションを適用:
-
-```bash
-DATABASE_URL="<Neonの接続文字列>" npx prisma migrate deploy
-```
+2. 環境変数 `DATABASE_URL` (Neonの接続文字列) を設定
+3. デプロイを実行 — ビルド時に `prisma migrate deploy` が自動実行され、
+   テーブル作成とポジションマスタ投入まで完了します
 
 ### 選手画像の保存 (Vercel Blob)
 
@@ -147,7 +151,7 @@ Vercel ダッシュボード → Storage → Blob でストアを作成し、
 
 ## 今後の拡張候補
 
-- CSV出力 / PDF出力 / LINE共有用画像
+- PDF出力
 - 試合結果の詳細管理・対戦相手分析
 - 体力・技術などの詳細能力値の編成への反映
 - 複数チーム・複数ユーザー対応

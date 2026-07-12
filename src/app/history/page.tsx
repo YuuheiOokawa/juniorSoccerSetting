@@ -76,16 +76,36 @@ export default async function HistoryPage() {
                   </span>
                 </div>
 
-                <div className="text-sm text-slate-600">
-                  {d.matches
-                    .map((m) => {
-                      const result =
-                        m.scoreFor != null && m.scoreAgainst != null
-                          ? ` ${m.scoreFor}-${m.scoreAgainst}`
-                          : "";
-                      return `第${m.matchNumber}試合${m.opponentName ? ` vs ${m.opponentName}` : ""}${result}`;
-                    })
-                    .join(" ・ ")}
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-600">
+                  {d.matches.map((m) => {
+                    const hasResult =
+                      m.scoreFor != null && m.scoreAgainst != null;
+                    const outcome = !hasResult
+                      ? null
+                      : m.scoreFor! > m.scoreAgainst!
+                        ? { label: "勝", cls: "bg-emerald-100 text-emerald-700" }
+                        : m.scoreFor! < m.scoreAgainst!
+                          ? { label: "負", cls: "bg-red-100 text-red-700" }
+                          : { label: "分", cls: "bg-slate-200 text-slate-600" };
+                    return (
+                      <span key={m.id} className="inline-flex items-center gap-1">
+                        第{m.matchNumber}試合
+                        {m.opponentName && ` vs ${m.opponentName}`}
+                        {hasResult && (
+                          <>
+                            <span className="font-mono font-bold">
+                              {m.scoreFor}-{m.scoreAgainst}
+                            </span>
+                            <span
+                              className={`rounded px-1.5 py-0.5 text-xs font-bold ${outcome!.cls}`}
+                            >
+                              {outcome!.label}
+                            </span>
+                          </>
+                        )}
+                      </span>
+                    );
+                  })}
                 </div>
 
                 <div className="flex flex-wrap gap-1">

@@ -51,8 +51,25 @@ export function MatchEditForm({ match }: { match: MatchDto }) {
             {match.startTime && ` ・${match.startTime}〜`}
           </span>
           {match.scoreFor != null && match.scoreAgainst != null && (
-            <span className="ml-2 font-mono font-bold">
-              {match.scoreFor} - {match.scoreAgainst}
+            <span className="ml-2 inline-flex items-center gap-1">
+              <span className="font-mono font-bold">
+                {match.scoreFor} - {match.scoreAgainst}
+              </span>
+              <span
+                className={`rounded px-1.5 py-0.5 text-xs font-bold ${
+                  match.scoreFor > match.scoreAgainst
+                    ? "bg-emerald-100 text-emerald-700"
+                    : match.scoreFor < match.scoreAgainst
+                      ? "bg-red-100 text-red-700"
+                      : "bg-slate-200 text-slate-600"
+                }`}
+              >
+                {match.scoreFor > match.scoreAgainst
+                  ? "勝"
+                  : match.scoreFor < match.scoreAgainst
+                    ? "負"
+                    : "分"}
+              </span>
             </span>
           )}
         </div>

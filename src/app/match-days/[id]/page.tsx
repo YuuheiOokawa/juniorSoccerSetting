@@ -88,7 +88,7 @@ export default async function MatchDayDetailPage({
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <Link href={`/match-days/${id}/attendance`} className="btn-secondary">
           👥 参加設定
         </Link>
@@ -100,6 +100,9 @@ export default async function MatchDayDetailPage({
         </Link>
         <Link href={`/match-days/${id}/stats`} className="btn-secondary">
           📊 出場時間
+        </Link>
+        <Link href={`/match-days/${id}/print`} className="btn-secondary">
+          📋 メンバー表
         </Link>
       </div>
 
