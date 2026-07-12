@@ -1,4 +1,4 @@
-import { POSITION_CODES, type PositionCode } from "../constants";
+import { FORMATIONS, type PositionCode } from "../constants";
 import type {
   Assignment,
   GenerationConfig,
@@ -12,7 +12,8 @@ export function validateLineup(
   players: LineupPlayer[],
   periods: LineupPeriod[],
   assignments: Assignment[],
-  config: Pick<GenerationConfig, "beginnerLimit">
+  config: Pick<GenerationConfig, "beginnerLimit">,
+  formationPositions: PositionCode[] = FORMATIONS["3-3-1"].positions
 ): ValidationResult {
   const errors: string[] = [];
   const playerMap = new Map(players.map((p) => [p.playerId, p]));
@@ -31,7 +32,7 @@ export function validateLineup(
 
     // ポジション重複・不足
     const positionSet = new Set(periodAssignments.map((a) => a.positionCode));
-    for (const code of POSITION_CODES) {
+    for (const code of formationPositions) {
       const count = periodAssignments.filter(
         (a) => a.positionCode === code
       ).length;
@@ -93,7 +94,8 @@ export function validatePreconditions(
   players: LineupPlayer[],
   lockedAssignments: Assignment[],
   periods: LineupPeriod[],
-  config: Pick<GenerationConfig, "beginnerLimit">
+  config: Pick<GenerationConfig, "beginnerLimit">,
+  formationPositions: PositionCode[] = FORMATIONS["3-3-1"].positions
 ): ValidationResult {
   const errors: string[] = [];
   const available = players.filter((p) => p.canPlay);
@@ -123,6 +125,11 @@ export function validatePreconditions(
     const playerCounts = new Map<string, number>();
     let beginnerCount = 0;
     for (const a of locked) {
+      if (!formationPositions.includes(a.positionCode)) {
+        errors.push(
+          `${label}: 固定されたポジション ${a.positionCode} は現在のフォーメーションに存在しません。固定を解除してください。`
+        );
+      }
       posCounts.set(a.positionCode, (posCounts.get(a.positionCode) ?? 0) + 1);
       playerCounts.set(a.playerId, (playerCounts.get(a.playerId) ?? 0) + 1);
       const p = playerMap.get(a.playerId);

@@ -5,6 +5,7 @@ import {
   PERIOD_SHORT_LABELS,
   POSITION_MASTER,
   formatSlots,
+  getFormation,
   type PeriodType,
 } from "@/lib/constants";
 import { PrintToolbar } from "@/components/PrintToolbar";
@@ -53,6 +54,12 @@ export default async function PrintPage({
     (p) => p.canPlay && !["ABSENT", "INJURED", "SICK"].includes(p.attendanceStatus)
   );
 
+  // 使用フォーメーションのポジションのみを行として表示する
+  const formationPositions = getFormation(matchDay.formation).positions;
+  const positionRows = POSITION_MASTER.filter((pos) =>
+    formationPositions.includes(pos.code)
+  );
+
   // 画像共有用のデータ (クライアントでcanvas描画)
   const shareData = {
     title: `${matchDay.matchDate.toLocaleDateString("ja-JP")} ${matchDay.eventName}`.trim(),
@@ -62,7 +69,7 @@ export default async function PrintPage({
       startTime: m.startTime,
       periods: m.periods.map((p) => ({
         label: PERIOD_SHORT_LABELS[p.periodType as PeriodType] ?? p.periodType,
-        positions: POSITION_MASTER.map((pos) => {
+        positions: positionRows.map((pos) => {
           const a = p.assignments.find((x) => x.position.code === pos.code);
           return {
             code: pos.code,
@@ -121,7 +128,7 @@ export default async function PrintPage({
                 </tr>
               </thead>
               <tbody>
-                {POSITION_MASTER.map((pos) => (
+                {positionRows.map((pos) => (
                   <tr key={pos.code}>
                     <td className="border border-slate-300 px-2 py-1 font-bold">
                       {pos.code}

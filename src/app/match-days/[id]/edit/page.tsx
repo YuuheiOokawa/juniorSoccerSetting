@@ -42,6 +42,7 @@ export default async function EditMatchDayPage({
           venue: matchDay.venue,
           meetingTime: matchDay.meetingTime,
           numberOfMatches: matchDay.numberOfMatches,
+          formation: matchDay.formation,
           notes: matchDay.notes,
           participantIds: matchDay.players.map((p) => p.playerId),
           hasLineup,

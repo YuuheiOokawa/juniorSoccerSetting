@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { POSITION_CODES } from "@/lib/constants";
+import { POSITION_CODES, getFormation } from "@/lib/constants";
 import { generateLineup } from "@/lib/lineup/generate";
 import { validateLineup } from "@/lib/lineup/constraints";
 import type { Assignment } from "@/lib/lineup/types";
@@ -125,7 +125,8 @@ export async function generateLineupAction(input: {
       randomnessWeight: setting?.randomnessWeight ?? 15,
       seed,
     },
-    lockedAssignments
+    lockedAssignments,
+    getFormation(bundle.formation).positions
   );
 
   if (!result.ok) {
@@ -216,9 +217,13 @@ export async function saveLineupAction(input: unknown): Promise<LineupActionResu
   }
 
   const setting = bundle.generationSetting;
-  const validation = validateLineup(players, periods, assignments, {
-    beginnerLimit: setting?.beginnerLimit ?? 2,
-  });
+  const validation = validateLineup(
+    players,
+    periods,
+    assignments,
+    { beginnerLimit: setting?.beginnerLimit ?? 2 },
+    getFormation(bundle.formation).positions
+  );
 
   const manualKeys = new Set(
     assignments.filter((a) => a.isManual).map((a) => `${a.periodId}:${a.playerId}`)
@@ -265,9 +270,13 @@ export async function confirmLineupAction(
         }
       }
     }
-    const validation = validateLineup(players, periods, assignments, {
-      beginnerLimit: bundle.generationSetting?.beginnerLimit ?? 2,
-    });
+    const validation = validateLineup(
+      players,
+      periods,
+      assignments,
+      { beginnerLimit: bundle.generationSetting?.beginnerLimit ?? 2 },
+      getFormation(bundle.formation).positions
+    );
     if (!validation.valid) {
       return {
         ok: false,

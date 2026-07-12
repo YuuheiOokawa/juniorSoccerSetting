@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
 import {
+  CATEGORY_COLORS,
   PERIOD_SHORT_LABELS,
-  POSITION_CODES,
+  categoryOf,
   formatSlots,
+  getFormation,
   type PeriodType,
   type PositionCode,
 } from "@/lib/constants";
@@ -85,18 +87,6 @@ function parseDropTarget(el: Element | null): DropTarget {
   return null;
 }
 
-// コート上の配置座標 (3-3-1、縦向き、% 指定)
-const COURT_LAYOUT: Record<PositionCode, { x: number; y: number }> = {
-  FW: { x: 50, y: 12 },
-  LMF: { x: 22, y: 36 },
-  CMF: { x: 50, y: 40 },
-  RMF: { x: 78, y: 36 },
-  LDF: { x: 22, y: 62 },
-  CDF: { x: 50, y: 66 },
-  RDF: { x: 78, y: 62 },
-  GK: { x: 50, y: 87 },
-};
-
 // ============================================================
 // 本体
 // ============================================================
@@ -108,6 +98,7 @@ export function FormationBoard({
   matches,
   initialAssignments,
   beginnerLimit,
+  formation: formationKey,
 }: {
   matchDayId: string;
   status: string;
@@ -115,7 +106,9 @@ export function FormationBoard({
   matches: BoardMatch[];
   initialAssignments: BoardAssignment[];
   beginnerLimit: number;
+  formation: string;
 }) {
+  const formation = getFormation(formationKey);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [assignments, setAssignments] = useState(initialAssignments);
@@ -638,6 +631,9 @@ export function FormationBoard({
 
       {/* 状態バー */}
       <div className="no-print flex flex-wrap items-center gap-2 text-sm">
+        <span className="rounded-full bg-slate-800 px-2.5 py-1 font-bold text-white">
+          ⚽ {formation.label}
+        </span>
         <span
           className={`rounded-full px-2.5 py-1 font-bold ${
             beginnerCount > beginnerLimit
@@ -680,12 +676,13 @@ export function FormationBoard({
           <div className="pointer-events-none absolute bottom-2 left-1/4 right-1/4 h-14 rounded-t-lg border-2 border-b-0 border-white/50" />
           <div className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/50" />
 
-          {POSITION_CODES.map((code) => {
-            const layout = COURT_LAYOUT[code];
+          {formation.positions.map((code) => {
+            const layout = formation.layout[code] ?? { x: 50, y: 50 };
             const assignment = periodAssignments.find(
               (a) => a.positionCode === code
             );
             const player = assignment ? playerMap.get(assignment.playerId) : null;
+            const colors = CATEGORY_COLORS[categoryOf(code)];
             const isSelected =
               selection?.type === "court" && selection.positionCode === code;
             const isDropHover =
@@ -710,41 +707,55 @@ export function FormationBoard({
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerCancel}
-                className={`absolute w-[88px] -translate-x-1/2 -translate-y-1/2 touch-none select-none rounded-xl p-1.5 text-center transition sm:w-24 ${
+                className={`absolute w-[92px] -translate-x-1/2 -translate-y-1/2 touch-none select-none rounded-xl text-center transition sm:w-[100px] ${
                   isDragSource ? "opacity-40 " : ""
                 }${
                   isDropHover
-                    ? "bg-sky-200 ring-4 ring-sky-400"
+                    ? "ring-4 ring-sky-400"
                     : isSelected
-                      ? "bg-yellow-300 ring-4 ring-yellow-400"
-                      : assignment
-                        ? "bg-white/95 hover:bg-white"
-                        : "border-2 border-dashed border-white/70 bg-white/20 text-white"
+                      ? "ring-4 ring-yellow-400"
+                      : ""
                 }`}
                 style={{ left: `${layout.x}%`, top: `${layout.y}%` }}
               >
-                <div className="text-[10px] font-bold leading-none opacity-70">
-                  {code}
-                  {assignment?.isLocked && " 🔒"}
-                  {assignment?.isManual && !assignment.isLocked && " ✋"}
-                </div>
                 {player ? (
-                  <div className="mt-0.5 flex flex-col items-center">
+                  // ウイイレ風の選手カード
+                  <div className="relative flex flex-col items-center rounded-xl bg-gradient-to-b from-slate-700 via-slate-900 to-black px-1 pb-1 pt-2 shadow-lg ring-1 ring-white/25">
+                    <span
+                      className={`absolute -left-1 -top-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-black shadow ${colors.badge}`}
+                    >
+                      {code}
+                    </span>
+                    {(assignment?.isLocked ||
+                      (assignment?.isManual && !assignment.isLocked)) && (
+                      <span className="absolute -right-1 -top-1.5 rounded-full bg-white/90 px-1 text-[11px] shadow">
+                        {assignment.isLocked ? "🔒" : "✋"}
+                      </span>
+                    )}
                     <PlayerAvatar
                       imageUrl={player.imageUrl}
                       name={player.name}
-                      size={34}
+                      size={38}
+                      className={`ring-2 ${colors.ring}`}
                     />
-                    <div className="mt-0.5 w-full truncate text-xs font-bold leading-tight">
-                      {player.jerseyNumber} {player.name}
-                      {player.isBeginner && "🔰"}
+                    <div className="mt-0.5 flex w-full items-center justify-center gap-1">
+                      <span className="font-mono text-[11px] font-black text-amber-300">
+                        {player.jerseyNumber}
+                      </span>
+                      <span className="max-w-[62px] truncate text-[11px] font-bold text-white">
+                        {player.name}
+                      </span>
+                      {player.isBeginner && <span className="text-[9px]">🔰</span>}
                     </div>
-                    <div className="text-[10px] leading-none text-slate-500">
+                    <div className="text-[9px] leading-tight text-slate-300">
                       {formatSlots(slotCounts.get(player.playerId) ?? 0)}
                     </div>
                   </div>
                 ) : (
-                  <div className="py-3 text-xs font-bold">タップで配置</div>
+                  <div className="rounded-xl border-2 border-dashed border-white/70 bg-white/15 px-1 py-3 text-white">
+                    <div className="text-[10px] font-black">{code}</div>
+                    <div className="text-xs font-bold">タップで配置</div>
+                  </div>
                 )}
               </button>
             );
@@ -823,28 +834,36 @@ export function FormationBoard({
                         onPointerUp={handlePointerUp}
                         onPointerCancel={handlePointerCancel}
                         disabled={readonly}
-                        className={`flex w-full touch-none select-none items-center gap-2 rounded-lg border-2 p-1.5 text-left ${
+                        className={`flex w-full touch-none select-none items-center gap-2 rounded-xl p-1.5 text-left shadow ring-1 transition ${
                           isDragSource ? "opacity-40 " : ""
                         }${
                           isDropHover
-                            ? "border-sky-400 bg-sky-100"
+                            ? "bg-sky-800 ring-4 ring-sky-400"
                             : isSelected
-                              ? "border-yellow-400 bg-yellow-100"
+                              ? "bg-slate-800 ring-4 ring-yellow-400"
                               : needsPlay
-                                ? "border-orange-300 bg-orange-50"
-                                : "border-slate-200 bg-white"
+                                ? "bg-gradient-to-r from-slate-800 to-orange-950 ring-orange-400/60"
+                                : "bg-gradient-to-r from-slate-700 to-slate-900 ring-white/20"
                         }`}
                       >
-                        <PlayerAvatar imageUrl={p.imageUrl} name={p.name} size={32} />
+                        <PlayerAvatar
+                          imageUrl={p.imageUrl}
+                          name={p.name}
+                          size={32}
+                          className="ring-2 ring-white/40"
+                        />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-bold">
-                            {p.jerseyNumber} {p.name}
+                          <span className="block truncate text-sm font-bold text-white">
+                            <span className="mr-1 font-mono font-black text-amber-300">
+                              {p.jerseyNumber}
+                            </span>
+                            {p.name}
                             {p.isBeginner && "🔰"}
                           </span>
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-slate-300">
                             {formatSlots(slots)}
                             {needsPlay && (
-                              <span className="ml-1 font-bold text-orange-600">
+                              <span className="ml-1 font-bold text-orange-400">
                                 ↑優先
                               </span>
                             )}

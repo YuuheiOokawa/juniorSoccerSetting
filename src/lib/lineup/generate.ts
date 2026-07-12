@@ -1,4 +1,4 @@
-import { POSITION_CODES, type PositionCode } from "../constants";
+import { FORMATIONS, type PositionCode } from "../constants";
 import { validateLineup, validatePreconditions } from "./constraints";
 import { createRng, weightedPick } from "./random";
 import type {
@@ -34,13 +34,21 @@ export function generateLineup(
   players: LineupPlayer[],
   periods: LineupPeriod[],
   config: GenerationConfig,
-  lockedAssignments: Assignment[] = []
+  lockedAssignments: Assignment[] = [],
+  // 使用するフォーメーションの8ポジション (省略時は 3-3-1)
+  formationPositions: PositionCode[] = FORMATIONS["3-3-1"].positions
 ): GenerationResult {
   const warnings: string[] = [];
   const rng = createRng(config.seed);
 
   // ---- 事前チェック ----
-  const pre = validatePreconditions(players, lockedAssignments, periods, config);
+  const pre = validatePreconditions(
+    players,
+    lockedAssignments,
+    periods,
+    config,
+    formationPositions
+  );
   if (!pre.valid) {
     return {
       ok: false,
@@ -101,7 +109,7 @@ export function generateLineup(
 
     // 残りのポジションを「配置が難しい順」に並べる。
     // GKを最優先とし、その後は対応可能な選手が少ない順。
-    const remaining = POSITION_CODES.filter((c) => !usedPositions.has(c));
+    const remaining = formationPositions.filter((c) => !usedPositions.has(c));
     const candidateCount = (code: PositionCode) =>
       available.filter((p) => p.aptitudes[code] > 0 && !usedPlayers.has(p.playerId))
         .length;
@@ -211,7 +219,13 @@ export function generateLineup(
   balancePlayingTime(available, sortedPeriods, result, config, rng);
 
   // ---- 最終検証 ----
-  const validation = validateLineup(available, sortedPeriods, result, config);
+  const validation = validateLineup(
+    available,
+    sortedPeriods,
+    result,
+    config,
+    formationPositions
+  );
   if (!validation.valid) {
     return {
       ok: false,

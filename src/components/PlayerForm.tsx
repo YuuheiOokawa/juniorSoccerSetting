@@ -48,7 +48,8 @@ const ABILITY_FIELDS: { key: "stamina" | "technique" | "speed" | "defense" | "at
 // カテゴリ一括設定: 「DF」を押すと LDF/CDF/RDF をまとめて設定できる
 const CATEGORY_GROUPS: { label: string; codes: PositionCode[] }[] = [
   { label: "DF", codes: ["LDF", "CDF", "RDF"] },
-  { label: "MF", codes: ["LMF", "CMF", "RMF"] },
+  { label: "MF", codes: ["DMF", "LMF", "CMF", "RMF", "OMF"] },
+  { label: "FW", codes: ["LFW", "RFW", "FW"] },
 ];
 
 // スマートフォン写真をアップロード前に縮小・正方形化する

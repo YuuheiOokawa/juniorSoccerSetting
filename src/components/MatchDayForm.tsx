@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { FORMATIONS } from "@/lib/constants";
 import {
   createMatchDay,
   deleteMatchDay,
   updateMatchDay,
 } from "@/server/actions/matchDays";
+import { FormationPreview } from "./FormationPreview";
 import { PlayerAvatar } from "./PlayerAvatar";
 
 export interface MatchDayFormPlayer {
@@ -24,6 +26,7 @@ export interface MatchDayFormValues {
   venue: string;
   meetingTime: string;
   numberOfMatches: number;
+  formation: string;
   notes: string;
   participantIds: string[];
   hasLineup?: boolean;
@@ -42,6 +45,7 @@ export function MatchDayForm({
   const [selected, setSelected] = useState<Set<string>>(
     new Set(initial.participantIds)
   );
+  const [formation, setFormation] = useState(initial.formation || "3-3-1");
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -69,6 +73,18 @@ export function MatchDayForm({
     }
 
     for (const id of selected) formData.append("participantIds", id);
+    formData.set("formation", formation);
+
+    if (
+      initial.id &&
+      initial.hasLineup &&
+      formation !== initial.formation &&
+      !window.confirm(
+        "フォーメーションを変更すると、作成済みの編成のポジションが合わなくなるため再生成が必要です。よろしいですか?"
+      )
+    ) {
+      return;
+    }
 
     startTransition(async () => {
       const result = initial.id
@@ -164,6 +180,28 @@ export function MatchDayForm({
               </option>
             ))}
           </select>
+        </div>
+        <div className="sm:col-span-2">
+          <label className="label">フォーメーション</label>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {Object.values(FORMATIONS).map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setFormation(f.key)}
+                className={`flex flex-col items-center gap-1 rounded-xl border-2 p-2 transition ${
+                  formation === f.key
+                    ? "border-emerald-500 bg-emerald-50 shadow"
+                    : "border-slate-200 bg-white hover:border-slate-300"
+                }`}
+              >
+                <FormationPreview formationKey={f.key} width={64} />
+                <span className="text-center text-xs font-bold leading-tight">
+                  {f.label}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
         <div className="sm:col-span-2">
           <label className="label">メモ</label>
