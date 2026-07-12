@@ -5,6 +5,8 @@ import { POSITION_CODES } from "./constants";
 // 選手
 // ============================================================
 
+const abilityLevel = z.coerce.number().int().min(0).max(5);
+
 export const playerSchema = z.object({
   name: z
     .string()
@@ -20,6 +22,14 @@ export const playerSchema = z.object({
   isBeginner: z.coerce.boolean().default(false),
   isActive: z.coerce.boolean().default(true),
   notes: z.string().trim().max(500).default(""),
+  grade: z.coerce.number().int().min(1).max(6).nullable(),
+  dominantFoot: z.enum(["", "RIGHT", "LEFT", "BOTH"]).default(""),
+  isCaptainCandidate: z.coerce.boolean().default(false),
+  stamina: abilityLevel.default(0),
+  technique: abilityLevel.default(0),
+  speed: abilityLevel.default(0),
+  defense: abilityLevel.default(0),
+  attack: abilityLevel.default(0),
   aptitudes: z
     .record(z.enum(POSITION_CODES), z.number().int().min(0).max(3))
     .refine(
@@ -130,3 +140,34 @@ export const saveLineupSchema = z.object({
 });
 
 export type SaveLineupInput = z.infer<typeof saveLineupSchema>;
+
+// ============================================================
+// 掲示板・表彰・投票
+// ============================================================
+
+export const boardPostSchema = z.object({
+  boardType: z.enum(["GRADE", "MATCHDAY"]),
+  grade: z.coerce.number().int().min(0).max(6).nullable(), // 0=全体
+  matchDayId: z.string().nullable(),
+  authorName: z
+    .string()
+    .trim()
+    .max(20, "名前は20文字以内で入力してください。")
+    .default(""),
+  body: z
+    .string()
+    .trim()
+    .min(1, "本文を入力してください。")
+    .max(1000, "本文は1000文字以内で入力してください。"),
+});
+
+export const awardSchema = z.object({
+  matchDayId: z.string().min(1),
+  playerId: z.string().min(1),
+  awardName: z
+    .string()
+    .trim()
+    .min(1, "賞の名前を入力してください。")
+    .max(50, "賞の名前は50文字以内で入力してください。"),
+  notes: z.string().trim().max(200).default(""),
+});

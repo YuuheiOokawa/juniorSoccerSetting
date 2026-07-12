@@ -48,8 +48,11 @@ async function main() {
   const positions = await prisma.position.findMany();
   const positionByCode = new Map(positions.map((p) => [p.code, p.id]));
 
+  // 開発確認用の学年 (学年別掲示板などの確認に使用)
+  const GRADES = [6, 6, 5, 6, 5, 4, 6, 5, 5, 4, 6, 5, 4, 4, 3];
+
   let created = 0;
-  for (const seed of PLAYERS) {
+  for (const [index, seed] of PLAYERS.entries()) {
     const existing = await prisma.player.findUnique({
       where: { jerseyNumber: seed.jerseyNumber },
     });
@@ -63,6 +66,7 @@ async function main() {
         isBeginner: seed.isBeginner,
         canPlayGk: (seed.aptitudes.GK ?? 0) > 0,
         isActive: true,
+        grade: GRADES[index] ?? null,
         positions: {
           create: Object.entries(seed.aptitudes).map(([code, level]) => ({
             positionId: positionByCode.get(code)!,

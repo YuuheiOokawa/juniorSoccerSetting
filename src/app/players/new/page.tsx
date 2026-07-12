@@ -17,6 +17,14 @@ export default function NewPlayerPage() {
           isBeginner: false,
           isActive: true,
           notes: "",
+          grade: null,
+          dominantFoot: "",
+          isCaptainCandidate: false,
+          stamina: 0,
+          technique: 0,
+          speed: 0,
+          defense: 0,
+          attack: 0,
           aptitudes,
         }}
       />

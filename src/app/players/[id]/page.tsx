@@ -39,6 +39,14 @@ export default async function EditPlayerPage({
           isBeginner: player.isBeginner,
           isActive: player.isActive,
           notes: player.notes,
+          grade: player.grade,
+          dominantFoot: player.dominantFoot,
+          isCaptainCandidate: player.isCaptainCandidate,
+          stamina: player.stamina,
+          technique: player.technique,
+          speed: player.speed,
+          defense: player.defense,
+          attack: player.attack,
           aptitudes,
         }}
       />

@@ -83,6 +83,16 @@ export default async function PlayersPage({
                       {p.jerseyNumber}
                     </span>
                     <span className="truncate text-lg font-bold">{p.name}</span>
+                    {p.grade != null && (
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
+                        {p.grade}年
+                      </span>
+                    )}
+                    {p.isCaptainCandidate && (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">
+                        Ⓒ
+                      </span>
+                    )}
                     {p.isBeginner && (
                       <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-700">
                         🔰初心者

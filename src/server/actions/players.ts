@@ -21,6 +21,7 @@ function parseAptitudes(formData: FormData): Record<PositionCode, number> {
 }
 
 async function parsePlayerForm(formData: FormData) {
+  const gradeRaw = formData.get("grade");
   const parsed = playerSchema.safeParse({
     name: formData.get("name"),
     nameKana: formData.get("nameKana") ?? "",
@@ -28,9 +29,38 @@ async function parsePlayerForm(formData: FormData) {
     isBeginner: formData.get("isBeginner") === "on",
     isActive: formData.get("isActive") !== "off",
     notes: formData.get("notes") ?? "",
+    grade: gradeRaw === "" || gradeRaw == null ? null : gradeRaw,
+    dominantFoot: formData.get("dominantFoot") ?? "",
+    isCaptainCandidate: formData.get("isCaptainCandidate") === "on",
+    stamina: formData.get("stamina") ?? 0,
+    technique: formData.get("technique") ?? 0,
+    speed: formData.get("speed") ?? 0,
+    defense: formData.get("defense") ?? 0,
+    attack: formData.get("attack") ?? 0,
     aptitudes: parseAptitudes(formData),
   });
   return parsed;
+}
+
+// playerSchema の共通カラムを Prisma の data 形式へ変換
+function toPlayerData(data: import("zod").infer<typeof playerSchema>) {
+  return {
+    name: data.name,
+    nameKana: data.nameKana,
+    jerseyNumber: data.jerseyNumber,
+    isBeginner: data.isBeginner,
+    canPlayGk: (data.aptitudes.GK ?? 0) > 0,
+    isActive: data.isActive,
+    notes: data.notes,
+    grade: data.grade,
+    dominantFoot: data.dominantFoot,
+    isCaptainCandidate: data.isCaptainCandidate,
+    stamina: data.stamina,
+    technique: data.technique,
+    speed: data.speed,
+    defense: data.defense,
+    attack: data.attack,
+  };
 }
 
 export async function createPlayer(formData: FormData): Promise<ActionResult> {
@@ -63,14 +93,8 @@ export async function createPlayer(formData: FormData): Promise<ActionResult> {
 
   const player = await prisma.player.create({
     data: {
-      name: data.name,
-      nameKana: data.nameKana,
-      jerseyNumber: data.jerseyNumber,
+      ...toPlayerData(data),
       imageUrl,
-      isBeginner: data.isBeginner,
-      canPlayGk: (data.aptitudes.GK ?? 0) > 0,
-      isActive: data.isActive,
-      notes: data.notes,
       positions: {
         create: POSITION_CODES.map((code) => ({
           positionId: positionByCode.get(code)!,
@@ -123,16 +147,7 @@ export async function updatePlayer(
   await prisma.$transaction([
     prisma.player.update({
       where: { id: playerId },
-      data: {
-        name: data.name,
-        nameKana: data.nameKana,
-        jerseyNumber: data.jerseyNumber,
-        imageUrl,
-        isBeginner: data.isBeginner,
-        canPlayGk: (data.aptitudes.GK ?? 0) > 0,
-        isActive: data.isActive,
-        notes: data.notes,
-      },
+      data: { ...toPlayerData(data), imageUrl },
     }),
     ...POSITION_CODES.map((code) =>
       prisma.playerPosition.upsert({

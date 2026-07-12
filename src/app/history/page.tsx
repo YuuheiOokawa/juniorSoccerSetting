@@ -15,6 +15,7 @@ export default async function HistoryPage() {
         },
       },
       players: { include: { player: true } },
+      awards: { include: { player: true }, orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -107,6 +108,19 @@ export default async function HistoryPage() {
                     );
                   })}
                 </div>
+
+                {d.awards.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {d.awards.map((a) => (
+                      <span
+                        key={a.id}
+                        className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800"
+                      >
+                        🏆 {a.awardName}: {a.player.jerseyNumber} {a.player.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex flex-wrap gap-1">
                   {playedPlayers

@@ -24,8 +24,25 @@ export interface PlayerFormValues {
   isBeginner: boolean;
   isActive: boolean;
   notes: string;
+  grade: number | null;
+  dominantFoot: string;
+  isCaptainCandidate: boolean;
+  stamina: number;
+  technique: number;
+  speed: number;
+  defense: number;
+  attack: number;
   aptitudes: Record<PositionCode, number>;
 }
+
+// 能力値の項目定義
+const ABILITY_FIELDS: { key: "stamina" | "technique" | "speed" | "defense" | "attack"; label: string }[] = [
+  { key: "stamina", label: "体力" },
+  { key: "technique", label: "技術" },
+  { key: "speed", label: "スピード" },
+  { key: "defense", label: "守備力" },
+  { key: "attack", label: "攻撃力" },
+];
 
 // カテゴリ一括設定: 「DF」を押すと LDF/CDF/RDF をまとめて設定できる
 const CATEGORY_GROUPS: { label: string; codes: PositionCode[] }[] = [
@@ -58,6 +75,13 @@ export function PlayerForm({ initial }: { initial: PlayerFormValues }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [aptitudes, setAptitudes] = useState(initial.aptitudes);
+  const [abilities, setAbilities] = useState({
+    stamina: initial.stamina,
+    technique: initial.technique,
+    speed: initial.speed,
+    defense: initial.defense,
+    attack: initial.attack,
+  });
   const [preview, setPreview] = useState<string | null>(initial.imageUrl);
   const imageFileRef = useRef<File | null>(null);
 
@@ -89,6 +113,9 @@ export function PlayerForm({ initial }: { initial: PlayerFormValues }) {
     }
     for (const [code, level] of Object.entries(aptitudes)) {
       formData.set(`aptitude_${code}`, String(level));
+    }
+    for (const [key, level] of Object.entries(abilities)) {
+      formData.set(key, String(level));
     }
 
     startTransition(async () => {
@@ -181,6 +208,32 @@ export function PlayerForm({ initial }: { initial: PlayerFormValues }) {
               className="input"
             />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">学年</label>
+              <select name="grade" defaultValue={initial.grade ?? ""} className="input">
+                <option value="">未設定</option>
+                {[1, 2, 3, 4, 5, 6].map((g) => (
+                  <option key={g} value={g}>
+                    {g}年
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">利き足</label>
+              <select
+                name="dominantFoot"
+                defaultValue={initial.dominantFoot}
+                className="input"
+              >
+                <option value="">未設定</option>
+                <option value="RIGHT">右</option>
+                <option value="LEFT">左</option>
+                <option value="BOTH">両足</option>
+              </select>
+            </div>
+          </div>
           <div className="flex items-end gap-4 pb-1">
             <label className="flex items-center gap-2 text-base font-bold">
               <input
@@ -201,6 +254,15 @@ export function PlayerForm({ initial }: { initial: PlayerFormValues }) {
               />
               在籍中
             </label>
+            <label className="flex items-center gap-2 text-base font-bold">
+              <input
+                type="checkbox"
+                name="isCaptainCandidate"
+                defaultChecked={initial.isCaptainCandidate}
+                className="h-5 w-5"
+              />
+              Ⓒ キャプテン候補
+            </label>
           </div>
         </div>
 
@@ -213,6 +275,48 @@ export function PlayerForm({ initial }: { initial: PlayerFormValues }) {
             rows={2}
             className="input"
           />
+        </div>
+      </div>
+
+      <div className="card space-y-3">
+        <h2 className="font-bold">能力値</h2>
+        <p className="text-xs text-slate-500">
+          星をタップして設定します (もう一度同じ星をタップで解除)。将来の自動編成の参考値になります。
+        </p>
+        <div className="space-y-2">
+          {ABILITY_FIELDS.map((f) => (
+            <div
+              key={f.key}
+              className="flex items-center gap-3 rounded-lg bg-slate-50 p-2"
+            >
+              <span className="w-20 font-bold">{f.label}</span>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    aria-label={`${f.label} ${level}`}
+                    onClick={() =>
+                      setAbilities((prev) => ({
+                        ...prev,
+                        [f.key]: prev[f.key] === level ? 0 : level,
+                      }))
+                    }
+                    className={`text-2xl leading-none transition ${
+                      abilities[f.key] >= level
+                        ? "text-amber-400"
+                        : "text-slate-300"
+                    }`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+              <span className="ml-auto text-sm font-bold text-slate-500">
+                {abilities[f.key] === 0 ? "未設定" : `${abilities[f.key]} / 5`}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
