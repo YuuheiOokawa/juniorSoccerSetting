@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
 import {
   CATEGORY_COLORS,
+  FORMATIONS,
   PERIOD_SHORT_LABELS,
   categoryOf,
   formatSlots,
@@ -16,6 +17,7 @@ import {
   generateLineupAction,
   saveLineupAction,
 } from "@/server/actions/lineup";
+import { updateFormationAction } from "@/server/actions/matchDays";
 import { PlayerAvatar } from "../PlayerAvatar";
 
 // ============================================================
@@ -32,16 +34,6 @@ export interface BoardPlayer {
   canPlay: boolean;
   maxPlayingSlots: number | null;
   priority: number;
-  overall: number | null; // 能力値から算出した総合値 (未設定はnull)
-}
-
-// 総合値バッジ (金/銀/銅) の配色
-function ratingClass(overall: number): string {
-  if (overall >= 80)
-    return "bg-gradient-to-b from-yellow-200 via-amber-400 to-amber-600 text-amber-950";
-  if (overall >= 60)
-    return "bg-gradient-to-b from-slate-100 via-slate-300 to-slate-500 to-90% text-slate-800";
-  return "bg-gradient-to-b from-orange-200 via-orange-400 to-orange-600 text-orange-950";
 }
 
 export interface BoardMatch {
@@ -118,7 +110,6 @@ export function FormationBoard({
   beginnerLimit: number;
   formation: string;
 }) {
-  const formation = getFormation(formationKey);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [assignments, setAssignments] = useState(initialAssignments);
@@ -131,6 +122,8 @@ export function FormationBoard({
   const dragRef = useRef<DragState | null>(null);
   const [matchIndex, setMatchIndex] = useState(0);
   const [periodIndex, setPeriodIndex] = useState(0);
+  const [formationState, setFormationState] = useState(formationKey);
+  const formation = getFormation(formationState);
   const [messages, setMessages] = useState<{ type: "error" | "warn" | "ok"; text: string }[]>([]);
 
   const playerMap = useMemo(
@@ -510,6 +503,57 @@ export function FormationBoard({
     });
   };
 
+  // フォーメーションを変更して1日全体を再生成する
+  const changeFormation = (newKey: string) => {
+    if (newKey === formationState || readonly) return;
+    const def = getFormation(newKey);
+    if (
+      !window.confirm(
+        `フォーメーションを ${def.label} に変更して、1日全体を再生成します。よろしいですか?\n(固定🔒は新フォーメーションに存在するポジションのみ維持されます)`
+      )
+    )
+      return;
+    setMessages([]);
+    startTransition(async () => {
+      const updated = await updateFormationAction(matchDayId, newKey);
+      if (!updated.ok) {
+        setMessages([{ type: "error", text: updated.error }]);
+        return;
+      }
+      setFormationState(newKey);
+      setSelection(null);
+      // 新フォーメーションに存在しないポジションの割り当て (固定含む) は引き継がない
+      const carried = assignments.filter((a) =>
+        def.positions.includes(a.positionCode)
+      );
+      const result = await generateLineupAction({
+        matchDayId,
+        scope: { type: "day" },
+        currentAssignments: carried,
+      });
+      if (result.ok) {
+        if (result.assignments) {
+          setAssignments(result.assignments as BoardAssignment[]);
+        }
+        setHistory([]);
+        setDirty(false);
+        setStatus("GENERATED");
+        setMessages([
+          { type: "ok", text: `${def.label} で編成を作り直しました。` },
+          ...result.warnings.map((w) => ({ type: "warn" as const, text: w })),
+        ]);
+        router.refresh();
+      } else {
+        setMessages(
+          [result.error, ...(result.errors ?? [])].map((text) => ({
+            type: "error",
+            text,
+          }))
+        );
+      }
+    });
+  };
+
   const save = () => {
     setMessages([]);
     startTransition(async () => {
@@ -641,9 +685,22 @@ export function FormationBoard({
 
       {/* 状態バー */}
       <div className="no-print flex flex-wrap items-center gap-2 text-sm">
-        <span className="rounded-full bg-slate-800 px-2.5 py-1 font-bold text-white">
-          ⚽ {formation.label}
-        </span>
+        <label className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-2.5 py-1 font-bold text-white shadow">
+          <span aria-hidden>⚽</span>
+          <select
+            value={formationState}
+            onChange={(e) => changeFormation(e.target.value)}
+            disabled={readonly || isPending}
+            className="cursor-pointer bg-transparent font-bold text-white focus:outline-none disabled:cursor-not-allowed"
+            aria-label="フォーメーションを変更"
+          >
+            {Object.values(FORMATIONS).map((f) => (
+              <option key={f.key} value={f.key} className="text-slate-900">
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <span
           className={`rounded-full px-2.5 py-1 font-bold ${
             beginnerCount > beginnerLimit
@@ -813,21 +870,12 @@ export function FormationBoard({
                         {assignment.isLocked ? "🔒" : "✋"}
                       </span>
                     )}
-                    <span className="relative">
-                      <PlayerAvatar
-                        imageUrl={player.imageUrl}
-                        name={player.name}
-                        size={40}
-                        className={`ring-2 shadow-[0_0_10px_rgba(255,255,255,0.25)] ${colors.ring}`}
-                      />
-                      {player.overall != null && (
-                        <span
-                          className={`absolute -bottom-1 -right-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full text-[9px] font-black shadow ring-1 ring-white/80 ${ratingClass(player.overall)}`}
-                        >
-                          {player.overall}
-                        </span>
-                      )}
-                    </span>
+                    <PlayerAvatar
+                      imageUrl={player.imageUrl}
+                      name={player.name}
+                      size={40}
+                      className={`ring-2 shadow-[0_0_10px_rgba(255,255,255,0.25)] ${colors.ring}`}
+                    />
                     <div className="mt-1 flex w-full items-center justify-center gap-1 rounded-md bg-black/40 px-0.5">
                       <span className="font-mono text-[11px] font-black text-amber-300 drop-shadow">
                         {player.jerseyNumber}
@@ -936,21 +984,12 @@ export function FormationBoard({
                                 : "bg-gradient-to-r from-slate-700 to-slate-900 ring-white/20"
                         }`}
                       >
-                        <span className="relative shrink-0">
-                          <PlayerAvatar
-                            imageUrl={p.imageUrl}
-                            name={p.name}
-                            size={32}
-                            className="ring-2 ring-white/40"
-                          />
-                          {p.overall != null && (
-                            <span
-                              className={`absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-black shadow ring-1 ring-white/80 ${ratingClass(p.overall)}`}
-                            >
-                              {p.overall}
-                            </span>
-                          )}
-                        </span>
+                        <PlayerAvatar
+                          imageUrl={p.imageUrl}
+                          name={p.name}
+                          size={32}
+                          className="ring-2 ring-white/40"
+                        />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-bold text-white">
                             <span className="mr-1 font-mono font-black text-amber-300">
