@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import {
   APTITUDE_LABELS,
+  APTITUDE_SHORT_LABELS,
   POSITION_MASTER,
   type PositionCode,
 } from "@/lib/constants";
@@ -341,6 +342,11 @@ export function PlayerForm({ initial }: { initial: PlayerFormValues }) {
             </button>
           ))}
         </div>
+        <p className="text-xs text-slate-500">
+          {[5, 4, 3, 2, 1, 0]
+            .map((l) => `${APTITUDE_SHORT_LABELS[l]}=${APTITUDE_LABELS[l]}`)
+            .join(" / ")}
+        </p>
         <div className="space-y-2">
           {POSITION_MASTER.map((pos) => (
             <div
@@ -352,12 +358,14 @@ export function PlayerForm({ initial }: { initial: PlayerFormValues }) {
                 {pos.name}
               </span>
               <div className="flex gap-1">
-                {[0, 1, 2, 3].map((level) => (
+                {[0, 1, 2, 3, 4, 5].map((level) => (
                   <button
                     key={level}
                     type="button"
                     onClick={() => setLevel(pos.code, level)}
-                    className={`rounded-lg px-2.5 py-1.5 text-sm font-bold border ${
+                    title={APTITUDE_LABELS[level]}
+                    aria-label={`${pos.code} ${APTITUDE_LABELS[level]}`}
+                    className={`min-w-[42px] rounded-lg px-2 py-1.5 text-sm font-bold border ${
                       aptitudes[pos.code] === level
                         ? level === 0
                           ? "bg-slate-500 text-white border-slate-500"
@@ -365,10 +373,13 @@ export function PlayerForm({ initial }: { initial: PlayerFormValues }) {
                         : "bg-white text-slate-600 border-slate-300"
                     }`}
                   >
-                    {APTITUDE_LABELS[level]}
+                    {APTITUDE_SHORT_LABELS[level]}
                   </button>
                 ))}
               </div>
+              <span className="ml-auto w-20 text-right text-xs font-bold text-slate-500">
+                {APTITUDE_LABELS[aptitudes[pos.code]]}
+              </span>
             </div>
           ))}
         </div>

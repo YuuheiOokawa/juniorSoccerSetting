@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { isAuthEnabled } from "@/lib/auth";
+import { logoutAction } from "@/server/actions/auth";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -31,17 +33,30 @@ export default function RootLayout({
             <Link href="/" className="text-lg font-bold tracking-wide">
               ⚽ Lineup Manager
             </Link>
-            <nav className="hidden gap-1 sm:flex">
-              {NAV_ITEMS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="rounded-lg px-3 py-2 font-bold transition hover:bg-white/15"
-                >
-                  {item.icon} {item.label}
-                </Link>
-              ))}
-            </nav>
+            <div className="flex items-center gap-1">
+              <nav className="hidden gap-1 sm:flex">
+                {NAV_ITEMS.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="rounded-lg px-3 py-2 font-bold transition hover:bg-white/15"
+                  >
+                    {item.icon} {item.label}
+                  </Link>
+                ))}
+              </nav>
+              {isAuthEnabled() && (
+                <form action={logoutAction}>
+                  <button
+                    type="submit"
+                    className="rounded-lg px-3 py-2 text-sm font-bold transition hover:bg-white/15"
+                    title="ログアウト"
+                  >
+                    🔓
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         </header>
         <main className="mx-auto max-w-5xl px-3 py-4 sm:px-4 sm:py-6">

@@ -15,7 +15,7 @@ function parseAptitudes(formData: FormData): Record<PositionCode, number> {
   for (const code of POSITION_CODES) {
     const raw = formData.get(`aptitude_${code}`);
     const level = raw == null ? 0 : Number(raw);
-    aptitudes[code] = Number.isInteger(level) && level >= 0 && level <= 3 ? level : 0;
+    aptitudes[code] = Number.isInteger(level) && level >= 0 && level <= 5 ? level : 0;
   }
   return aptitudes;
 }
