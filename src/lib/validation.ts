@@ -148,21 +148,35 @@ export type SaveLineupInput = z.infer<typeof saveLineupSchema>;
 // 掲示板・表彰・投票
 // ============================================================
 
-export const boardPostSchema = z.object({
-  boardType: z.enum(["GRADE", "MATCHDAY"]),
-  grade: z.coerce.number().int().min(0).max(6).nullable(), // 0=全体
-  matchDayId: z.string().nullable(),
-  authorName: z
-    .string()
-    .trim()
-    .max(20, "名前は20文字以内で入力してください。")
-    .default(""),
-  body: z
-    .string()
-    .trim()
-    .min(1, "本文を入力してください。")
-    .max(1000, "本文は1000文字以内で入力してください。"),
-});
+export const boardPostSchema = z
+  .object({
+    boardType: z.enum(["GRADE", "MATCHDAY"]),
+    grade: z.coerce.number().int().min(0).max(6).nullable(), // 0=全体
+    matchDayId: z.string().nullable(),
+    authorName: z
+      .string()
+      .trim()
+      .max(20, "名前は20文字以内で入力してください。")
+      .default(""),
+    body: z
+      .string()
+      .trim()
+      .max(1000, "本文は1000文字以内で入力してください。")
+      .default(""),
+    // フォーメーション案の添付 (任意)
+    formationKey: z
+      .enum(["3-3-1", "2-3-2", "2-4-1-W", "2-4-1-V", "3-2-2"])
+      .nullable()
+      .optional(),
+    formationAssignments: z
+      .record(z.enum(POSITION_CODES), z.string().trim().max(30))
+      .nullable()
+      .optional(),
+  })
+  .refine((data) => data.body.length > 0 || data.formationKey, {
+    message: "本文を入力するか、フォーメーション案を添付してください。",
+    path: ["body"],
+  });
 
 export const awardSchema = z.object({
   matchDayId: z.string().min(1),

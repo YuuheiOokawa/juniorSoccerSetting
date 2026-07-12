@@ -59,6 +59,10 @@ export default async function BoardsPage({
             hour: "2-digit",
             minute: "2-digit",
           }),
+          formationKey: p.formationKey,
+          formationAssignments: p.formationData
+            ? (JSON.parse(p.formationData) as Record<string, string>)
+            : null,
         }))}
       />
     </div>

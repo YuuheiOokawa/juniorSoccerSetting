@@ -238,13 +238,15 @@ model MvpVote {
 
 // 掲示板 (学年別 / 試合日別)
 model BoardPost {
-  id         String   @id @default(cuid())
-  boardType  String // GRADE / MATCHDAY
-  grade      Int? // boardType=GRADE のとき 0(全体)〜6(学年)
-  matchDayId String? // boardType=MATCHDAY のとき対象の試合日
-  authorName String   @default("匿名")
-  body       String
-  createdAt  DateTime @default(now())
+  id            String   @id @default(cuid())
+  boardType     String // GRADE / MATCHDAY
+  grade         Int? // boardType=GRADE のとき 0(全体)〜6(学年)
+  matchDayId    String? // boardType=MATCHDAY のとき対象の試合日
+  authorName    String   @default("匿名")
+  body          String
+  formationKey  String? // 添付されたフォーメーション案 (FORMATIONS のキー)
+  formationData String? // ポジションごとの選手表示名 JSON: {"GK":"1 佐藤"}
+  createdAt     DateTime @default(now())
 
   matchDay MatchDay? @relation(fields: [matchDayId], references: [id], onDelete: Cascade)
 
