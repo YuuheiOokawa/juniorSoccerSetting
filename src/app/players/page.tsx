@@ -38,9 +38,14 @@ export default async function PlayersPage({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">選手一覧</h1>
-        <Link href="/players/new" className="btn-primary">
-          ＋ 新規登録
-        </Link>
+        <div className="flex gap-2">
+          <a href="/api/export/players" className="btn-secondary">
+            📄 CSV
+          </a>
+          <Link href="/players/new" className="btn-primary">
+            ＋ 新規登録
+          </Link>
+        </div>
       </div>
 
       <form className="flex gap-2" method="get">

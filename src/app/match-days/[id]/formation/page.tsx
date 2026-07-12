@@ -59,9 +59,17 @@ export default async function FormationPage({
     <div className="space-y-3">
       <div className="no-print flex items-center justify-between">
         <h1 className="text-xl font-bold">フォーメーション</h1>
-        <Link href={`/match-days/${id}`} className="text-sm text-emerald-700 underline">
-          ← 試合日に戻る
-        </Link>
+        <div className="flex items-center gap-3 text-sm">
+          <Link
+            href={`/match-days/${id}/print`}
+            className="text-emerald-700 underline"
+          >
+            📋 メンバー表・共有
+          </Link>
+          <Link href={`/match-days/${id}`} className="text-emerald-700 underline">
+            ← 試合日に戻る
+          </Link>
+        </div>
       </div>
       <FormationBoard
         matchDayId={id}

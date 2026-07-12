@@ -91,9 +91,17 @@ export default async function StatsPage({
         <h1 className="text-xl font-bold">
           出場時間集計 ({matchDay.matchDate.toLocaleDateString("ja-JP")})
         </h1>
-        <Link href={`/match-days/${id}`} className="text-sm text-emerald-700 underline">
-          ← 試合日に戻る
-        </Link>
+        <div className="flex items-center gap-3">
+          <a
+            href={`/api/export/match-days/${id}/stats`}
+            className="btn-secondary !py-1.5 text-sm"
+          >
+            📄 CSV
+          </a>
+          <Link href={`/match-days/${id}`} className="text-sm text-emerald-700 underline">
+            ← 試合日に戻る
+          </Link>
+        </div>
       </div>
       <p className="text-sm text-slate-600">
         平均出場: {formatSlots(Math.round(avg * 10) / 10)} (

@@ -34,12 +34,30 @@ body {
   }
 }
 
-/* 印刷用: フォーメーション表をA4で印刷しやすくする */
+/* 印刷用: メンバー表をA4で印刷しやすくする */
 @media print {
   .no-print {
     display: none !important;
   }
   body {
     background: white;
+    padding: 0 !important;
   }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .print-sheet {
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+  .break-inside-avoid {
+    break-inside: avoid;
+  }
+}
+
+@page {
+  size: A4;
+  margin: 12mm;
 }
