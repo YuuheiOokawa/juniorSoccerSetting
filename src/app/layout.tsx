@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { BackBar } from "@/components/BackBar";
 import { isAuthEnabled } from "@/lib/auth";
 import { logoutAction } from "@/server/actions/auth";
 import "./globals.css";
@@ -59,6 +60,7 @@ export default function RootLayout({
             </div>
           </div>
         </header>
+        <BackBar />
         <main className="mx-auto max-w-5xl px-3 py-4 sm:px-4 sm:py-6">
           {children}
         </main>
