@@ -187,6 +187,27 @@ export const boardPostSchema = z
     path: ["body"],
   });
 
+export const boardCommentSchema = z.object({
+  postId: z.string().min(1),
+  authorName: z
+    .string()
+    .trim()
+    .max(20, "名前は20文字以内で入力してください。")
+    .default(""),
+  body: z
+    .string()
+    .trim()
+    .min(1, "コメントを入力してください。")
+    .max(500, "コメントは500文字以内で入力してください。"),
+});
+
+export const REACTION_EMOJIS = ["👍", "❤️", "🔥"] as const;
+
+export const boardReactionSchema = z.object({
+  postId: z.string().min(1),
+  emoji: z.enum(REACTION_EMOJIS),
+});
+
 export const awardSchema = z.object({
   matchDayId: z.string().min(1),
   playerId: z.string().min(1),

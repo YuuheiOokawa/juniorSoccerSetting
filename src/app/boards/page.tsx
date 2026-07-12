@@ -23,6 +23,10 @@ export default async function BoardsPage({
       where: { boardType: "GRADE", grade },
       orderBy: { createdAt: "desc" },
       take: 100,
+      include: {
+        comments: { orderBy: { createdAt: "asc" } },
+        reactions: true,
+      },
     }),
     prisma.player.findMany({
       where: { isActive: true },
@@ -75,6 +79,25 @@ export default async function BoardsPage({
           }),
           formationKey: p.formationKey,
           formationAssignments: formationsByPost.get(p.id) ?? null,
+          comments: (p.comments ?? []).map((c) => ({
+            id: c.id,
+            authorName: c.authorName,
+            body: c.body,
+            createdAt: c.createdAt.toLocaleString("ja-JP", {
+              month: "numeric",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          })),
+          reactions: Object.fromEntries(
+            Object.entries(
+              (p.reactions ?? []).reduce<Record<string, number>>((acc, r) => {
+                acc[r.emoji] = (acc[r.emoji] ?? 0) + 1;
+                return acc;
+              }, {})
+            )
+          ),
         }))}
       />
     </div>

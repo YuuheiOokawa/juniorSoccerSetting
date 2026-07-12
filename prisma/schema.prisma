@@ -248,10 +248,37 @@ model BoardPost {
   formationData String? // ポジションごとの選手表示名 JSON: {"GK":"1 佐藤"}
   createdAt     DateTime @default(now())
 
-  matchDay MatchDay? @relation(fields: [matchDayId], references: [id], onDelete: Cascade)
+  matchDay  MatchDay?       @relation(fields: [matchDayId], references: [id], onDelete: Cascade)
+  comments  BoardComment[]
+  reactions BoardReaction[]
 
   @@index([boardType, grade, createdAt])
   @@index([matchDayId, createdAt])
+}
+
+// 掲示板投稿へのコメント返信
+model BoardComment {
+  id         String   @id @default(cuid())
+  postId     String
+  authorName String   @default("匿名")
+  body       String
+  createdAt  DateTime @default(now())
+
+  post BoardPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+}
+
+// 掲示板投稿へのリアクション (匿名、絵文字ごとのカウント)
+model BoardReaction {
+  id        String   @id @default(cuid())
+  postId    String
+  emoji     String   @default("👍")
+  createdAt DateTime @default(now())
+
+  post BoardPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
 }
 
 model GenerationHistory {

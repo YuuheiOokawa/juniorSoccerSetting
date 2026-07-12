@@ -72,10 +72,39 @@ export function AttendanceEditor({
     (e) => e.canPlay && !["ABSENT", "INJURED", "SICK"].includes(e.attendanceStatus)
   ).length;
 
+  // 一括設定
+  const setAllAttendance = (status: "PRESENT" | "ABSENT") => {
+    if (
+      status === "ABSENT" &&
+      !window.confirm("全員を「欠席」にします。よろしいですか?")
+    )
+      return;
+    setEntries((prev) =>
+      prev.map((e) => ({
+        ...e,
+        attendanceStatus: status,
+        canPlay: status === "PRESENT",
+      }))
+    );
+    setDirty(true);
+  };
+
   return (
     <div className="space-y-3">
       <div className="sticky top-14 z-30 flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         <span className="font-bold">出場可能: {presentCount}人</span>
+        <button
+          onClick={() => setAllAttendance("PRESENT")}
+          className="btn-secondary !py-1 text-xs"
+        >
+          全員参加
+        </button>
+        <button
+          onClick={() => setAllAttendance("ABSENT")}
+          className="btn-secondary !py-1 text-xs"
+        >
+          全員欠席
+        </button>
         {dirty && (
           <span className="text-sm font-bold text-amber-600">未保存の変更あり</span>
         )}

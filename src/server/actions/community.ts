@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { awardSchema, boardPostSchema } from "@/lib/validation";
+import {
+  awardSchema,
+  boardCommentSchema,
+  boardPostSchema,
+  boardReactionSchema,
+} from "@/lib/validation";
 import type { ActionResult } from "./players";
 
 // ============================================================
@@ -64,6 +69,69 @@ export async function deleteBoardPost(postId: string): Promise<ActionResult> {
 
   revalidatePath("/boards");
   if (post.matchDayId) revalidatePath(`/match-days/${post.matchDayId}/board`);
+  return { ok: true };
+}
+
+// ============================================================
+// コメント返信・リアクション
+// ============================================================
+
+async function revalidateForPost(postId: string) {
+  const post = await prisma.boardPost.findUnique({ where: { id: postId } });
+  revalidatePath("/boards");
+  if (post?.matchDayId) revalidatePath(`/match-days/${post.matchDayId}/board`);
+}
+
+export async function addBoardComment(input: unknown): Promise<ActionResult> {
+  const parsed = boardCommentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message };
+  }
+  const post = await prisma.boardPost.findUnique({
+    where: { id: parsed.data.postId },
+  });
+  if (!post) return { ok: false, error: "投稿が見つかりません。" };
+
+  await prisma.boardComment.create({
+    data: {
+      postId: parsed.data.postId,
+      authorName: parsed.data.authorName || "匿名",
+      body: parsed.data.body,
+    },
+  });
+
+  await revalidateForPost(parsed.data.postId);
+  return { ok: true };
+}
+
+export async function deleteBoardComment(commentId: string): Promise<ActionResult> {
+  const comment = await prisma.boardComment.findUnique({
+    where: { id: commentId },
+  });
+  if (!comment) return { ok: false, error: "コメントが見つかりません。" };
+
+  await prisma.boardComment.delete({ where: { id: commentId } });
+
+  await revalidateForPost(comment.postId);
+  return { ok: true };
+}
+
+// 匿名リアクション (誰が押したかは保存しない。二重防止は端末側で簡易制御)
+export async function addBoardReaction(input: unknown): Promise<ActionResult> {
+  const parsed = boardReactionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "不正なリアクションです。" };
+  }
+  const post = await prisma.boardPost.findUnique({
+    where: { id: parsed.data.postId },
+  });
+  if (!post) return { ok: false, error: "投稿が見つかりません。" };
+
+  await prisma.boardReaction.create({
+    data: { postId: parsed.data.postId, emoji: parsed.data.emoji },
+  });
+
+  await revalidateForPost(parsed.data.postId);
   return { ok: true };
 }
 
