@@ -15,6 +15,10 @@ export default async function MatchDayBoardPage({
     where: { id },
     include: {
       boardPosts: { orderBy: { createdAt: "desc" }, take: 100 },
+      players: {
+        include: { player: true },
+        orderBy: { player: { jerseyNumber: "asc" } },
+      },
     },
   });
   if (!matchDay) notFound();
@@ -41,6 +45,16 @@ export default async function MatchDayBoardPage({
       <BoardPanel
         boardType="MATCHDAY"
         matchDayId={id}
+        players={matchDay.players
+          .filter(
+            (mdp) =>
+              mdp.canPlay &&
+              !["ABSENT", "INJURED", "SICK"].includes(mdp.attendanceStatus)
+          )
+          .map((mdp) => ({
+            playerId: mdp.playerId,
+            label: `${mdp.player.jerseyNumber} ${mdp.player.name}`,
+          }))}
         posts={matchDay.boardPosts.map((p) => ({
           id: p.id,
           authorName: p.authorName,
@@ -51,6 +65,10 @@ export default async function MatchDayBoardPage({
             hour: "2-digit",
             minute: "2-digit",
           }),
+          formationKey: p.formationKey,
+          formationAssignments: p.formationData
+            ? (JSON.parse(p.formationData) as Record<string, string>)
+            : null,
         }))}
       />
     </div>

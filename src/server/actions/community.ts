@@ -26,6 +26,19 @@ export async function createBoardPost(input: unknown): Promise<ActionResult> {
     if (!matchDay) return { ok: false, error: "試合日が見つかりません。" };
   }
 
+  // フォーメーション案: 選手名は表示用文字列として保存する
+  // (選手が後で削除されても投稿の表示が壊れないようにするため)
+  const formationData =
+    data.formationKey && data.formationAssignments
+      ? JSON.stringify(
+          Object.fromEntries(
+            Object.entries(data.formationAssignments).filter(
+              ([, name]) => name && name.length > 0
+            )
+          )
+        )
+      : null;
+
   await prisma.boardPost.create({
     data: {
       boardType: data.boardType,
@@ -33,6 +46,8 @@ export async function createBoardPost(input: unknown): Promise<ActionResult> {
       matchDayId: data.boardType === "MATCHDAY" ? data.matchDayId : null,
       authorName: data.authorName || "匿名",
       body: data.body,
+      formationKey: data.formationKey ?? null,
+      formationData,
     },
   });
 
