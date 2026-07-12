@@ -89,6 +89,7 @@ model MatchDay {
   venue           String   @default("")
   meetingTime     String   @default("") // "08:30" のような文字列
   numberOfMatches Int      @default(1)
+  formation       String   @default("3-3-1") // FORMATIONS のキー (3-3-1 / 2-3-2 / 2-4-1-W / 2-4-1-V / 3-2-2)
   notes           String   @default("")
   status          String   @default("NOT_GENERATED") // NOT_GENERATED / GENERATED / EDITING / CONFIRMED
   createdAt       DateTime @default(now())

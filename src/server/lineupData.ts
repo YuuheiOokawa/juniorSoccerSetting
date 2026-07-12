@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/db";
-import { POSITION_CODES, type PositionCode } from "@/lib/constants";
+import {
+  APTITUDE_FALLBACK,
+  POSITION_CODES,
+  type PositionCode,
+} from "@/lib/constants";
 import type { Assignment, LineupPeriod, LineupPlayer } from "@/lib/lineup/types";
 
 // 試合日の編成に必要なデータを一括で読み込む (N+1を避ける)
@@ -48,6 +52,18 @@ export function toLineupPlayers(bundle: MatchDayBundle): LineupPlayer[] {
         aptitudes[code] = pp.isAvailable ? pp.aptitudeLevel : 0;
       }
     }
+    // 新ポジション (DMF/OMF/LFW/RFW) が未設定の場合は、関連ポジションの
+    // 適性から推定する (明示的に設定されていればそちらを優先)
+    for (const [code, fallbacks] of Object.entries(APTITUDE_FALLBACK)) {
+      const target = code as PositionCode;
+      if (aptitudes[target] === 0) {
+        aptitudes[target] = Math.max(
+          0,
+          ...fallbacks.map((f) => aptitudes[f] ?? 0)
+        );
+      }
+    }
+
     // 当日のGK可否設定が優先される
     if (!mdp.canPlayGk) aptitudes.GK = 0;
     else if (mdp.canPlayGk && aptitudes.GK === 0) aptitudes.GK = 1;

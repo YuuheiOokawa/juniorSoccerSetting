@@ -3,6 +3,7 @@ import { csvResponse, toCsv } from "@/lib/csv";
 import {
   PERIOD_LABELS,
   POSITION_MASTER,
+  getFormation,
   type PeriodType,
 } from "@/lib/constants";
 
@@ -36,9 +37,14 @@ export async function GET(
     return new Response("試合日が見つかりません。", { status: 404 });
   }
 
+  const formationPositions = getFormation(matchDay.formation).positions;
+  const positionRows = POSITION_MASTER.filter((pos) =>
+    formationPositions.includes(pos.code)
+  );
+
   const rows: (string | number)[][] = [
     [
-      `${matchDay.matchDate.toLocaleDateString("ja-JP")} ${matchDay.eventName}`.trim(),
+      `${matchDay.matchDate.toLocaleDateString("ja-JP")} ${matchDay.eventName} (${getFormation(matchDay.formation).label})`.trim(),
     ],
     [],
   ];
@@ -53,7 +59,7 @@ export async function GET(
         (p) => PERIOD_LABELS[p.periodType as PeriodType] ?? p.periodType
       ),
     ]);
-    for (const pos of POSITION_MASTER) {
+    for (const pos of positionRows) {
       rows.push([
         `${pos.code} (${pos.name})`,
         ...match.periods.map((p) => {

@@ -70,13 +70,45 @@ export default async function PlayersPage({
         <p className="card text-slate-500">該当する選手がいません。</p>
       ) : (
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {players.map((p) => (
+          {players.map((p) => {
+            // 能力値 (設定済みのもの) の平均から総合値を算出 (ウイイレ風の99スケール)
+            const abilities = [p.stamina, p.technique, p.speed, p.defense, p.attack].filter(
+              (v) => v > 0
+            );
+            const overall =
+              abilities.length > 0
+                ? Math.round(
+                    (abilities.reduce((a, b) => a + b, 0) / abilities.length) * 19.6
+                  )
+                : null;
+            return (
             <li key={p.id}>
               <Link
                 href={`/players/${p.id}`}
                 className="card flex items-center gap-3 hover:border-emerald-400"
               >
-                <PlayerAvatar imageUrl={p.imageUrl} name={p.name} size={48} />
+                <span className="relative">
+                  <PlayerAvatar
+                    imageUrl={p.imageUrl}
+                    name={p.name}
+                    size={48}
+                    className="ring-2 ring-slate-300"
+                  />
+                  {overall != null && (
+                    <span
+                      className={`absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black shadow ring-1 ring-white ${
+                        overall >= 80
+                          ? "bg-gradient-to-b from-amber-300 to-amber-500 text-amber-950"
+                          : overall >= 60
+                            ? "bg-gradient-to-b from-slate-200 to-slate-400 text-slate-800"
+                            : "bg-gradient-to-b from-orange-200 to-orange-400 text-orange-900"
+                      }`}
+                      title="総合値 (能力値の平均)"
+                    >
+                      {overall}
+                    </span>
+                  )}
+                </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-lg font-bold text-slate-500">
@@ -125,7 +157,8 @@ export default async function PlayersPage({
                 </div>
               </Link>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </div>

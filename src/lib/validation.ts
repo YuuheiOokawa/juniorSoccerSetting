@@ -64,6 +64,9 @@ export const matchDaySchema = z.object({
     .int()
     .min(1, "試合数は1以上で入力してください。")
     .max(6, "試合数は6以下で入力してください。"),
+  formation: z
+    .enum(["3-3-1", "2-3-2", "2-4-1-W", "2-4-1-V", "3-2-2"])
+    .default("3-3-1"),
   notes: z.string().trim().max(500).default(""),
 });
 

@@ -28,6 +28,7 @@ export async function createMatchDay(formData: FormData): Promise<ActionResult> 
     venue: formData.get("venue") ?? "",
     meetingTime: formData.get("meetingTime") ?? "",
     numberOfMatches: formData.get("numberOfMatches"),
+    formation: formData.get("formation") ?? "3-3-1",
     notes: formData.get("notes") ?? "",
   });
   if (!parsed.success) {
@@ -43,6 +44,7 @@ export async function createMatchDay(formData: FormData): Promise<ActionResult> 
       venue: data.venue,
       meetingTime: data.meetingTime,
       numberOfMatches: data.numberOfMatches,
+      formation: data.formation,
       notes: data.notes,
       matches: {
         create: Array.from({ length: data.numberOfMatches }, (_, i) => ({
@@ -90,6 +92,7 @@ export async function updateMatchDay(
     venue: formData.get("venue") ?? "",
     meetingTime: formData.get("meetingTime") ?? "",
     numberOfMatches: formData.get("numberOfMatches"),
+    formation: formData.get("formation") ?? "3-3-1",
     notes: formData.get("notes") ?? "",
   });
   if (!parsed.success) {
@@ -145,6 +148,7 @@ export async function updateMatchDay(
         venue: data.venue,
         meetingTime: data.meetingTime,
         numberOfMatches: data.numberOfMatches,
+        formation: data.formation,
         notes: data.notes,
       },
     }),

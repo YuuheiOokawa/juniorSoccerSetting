@@ -21,6 +21,7 @@ export default async function NewMatchDayPage() {
           venue: "",
           meetingTime: "",
           numberOfMatches: 1,
+          formation: "3-3-1",
           notes: "",
           participantIds: players.map((p) => p.id),
         }}

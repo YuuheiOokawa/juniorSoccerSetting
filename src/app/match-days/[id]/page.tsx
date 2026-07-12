@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import {
   ATTENDANCE_LABELS,
   LINEUP_STATUS_LABELS,
+  getFormation,
 } from "@/lib/constants";
 import { GenerateButton } from "@/components/GenerateButton";
 import { MatchEditForm } from "@/components/MatchEditForm";
@@ -75,6 +76,10 @@ export default async function MatchDayDetailPage({
             {matchDay.eventName || "(大会名なし)"}
             {matchDay.venue && ` @ ${matchDay.venue}`}
             {matchDay.meetingTime && ` ・集合 ${matchDay.meetingTime}`}
+            {" ・"}
+            <span className="font-bold text-slate-700">
+              ⚽ {getFormation(matchDay.formation).label}
+            </span>
           </p>
         </div>
         <span

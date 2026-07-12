@@ -78,6 +78,7 @@ export default async function FormationPage({
         matches={matches}
         initialAssignments={assignments}
         beginnerLimit={bundle.generationSetting?.beginnerLimit ?? 2}
+        formation={bundle.formation}
       />
     </div>
   );
