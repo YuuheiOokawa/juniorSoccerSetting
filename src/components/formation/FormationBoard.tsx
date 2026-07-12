@@ -19,6 +19,7 @@ import {
 } from "@/server/actions/lineup";
 import { updateFormationAction } from "@/server/actions/matchDays";
 import { PlayerAvatar } from "../PlayerAvatar";
+import { PeriodTimer } from "./PeriodTimer";
 
 // ============================================================
 // 型
@@ -725,6 +726,30 @@ export function FormationBoard({
             ✅ 確定済み (編集するには確定解除)
           </span>
         )}
+      </div>
+
+      {/* 試合当日用の交代タイマー */}
+      <div className="no-print">
+        <PeriodTimer
+          key={currentPeriod.id}
+          periodLabel={`第${currentMatch.matchNumber}試合 ${
+            PERIOD_SHORT_LABELS[currentPeriod.periodType as PeriodType] ??
+            currentPeriod.periodType
+          }`}
+          hasNext={
+            periodIndex < currentMatch.periods.length - 1 ||
+            matchIndex < matches.length - 1
+          }
+          onNext={() => {
+            setSelection(null);
+            if (periodIndex < currentMatch.periods.length - 1) {
+              setPeriodIndex(periodIndex + 1);
+            } else if (matchIndex < matches.length - 1) {
+              setMatchIndex(matchIndex + 1);
+              setPeriodIndex(0);
+            }
+          }}
+        />
       </div>
 
       <div className="gap-3 lg:grid lg:grid-cols-[1fr_320px]">

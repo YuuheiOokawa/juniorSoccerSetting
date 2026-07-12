@@ -7,9 +7,10 @@ export const dynamic = "force-dynamic";
 export default async function PlayersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; filter?: string }>;
+  searchParams: Promise<{ q?: string; filter?: string; grade?: string }>;
 }) {
-  const { q, filter } = await searchParams;
+  const { q, filter, grade } = await searchParams;
+  const gradeNum = grade ? Number(grade) : null;
 
   const players = await prisma.player.findMany({
     where: {
@@ -23,6 +24,7 @@ export default async function PlayersPage({
         : {}),
       ...(filter === "beginner" ? { isBeginner: true } : {}),
       ...(filter === "inactive" ? { isActive: false } : { isActive: true }),
+      ...(gradeNum && gradeNum >= 1 && gradeNum <= 6 ? { grade: gradeNum } : {}),
     },
     orderBy: { jerseyNumber: "asc" },
     include: {
@@ -60,6 +62,14 @@ export default async function PlayersPage({
           <option value="">在籍中</option>
           <option value="beginner">初心者のみ</option>
           <option value="inactive">退団・休部</option>
+        </select>
+        <select name="grade" defaultValue={grade ?? ""} className="input w-auto">
+          <option value="">全学年</option>
+          {[1, 2, 3, 4, 5, 6].map((g) => (
+            <option key={g} value={g}>
+              {g}年
+            </option>
+          ))}
         </select>
         <button type="submit" className="btn-secondary">
           検索

@@ -6,6 +6,7 @@ import {
   LINEUP_STATUS_LABELS,
   getFormation,
 } from "@/lib/constants";
+import { DuplicateMatchDayButton } from "@/components/DuplicateMatchDayButton";
 import { GenerateButton } from "@/components/GenerateButton";
 import { MatchEditForm } from "@/components/MatchEditForm";
 
@@ -143,11 +144,21 @@ export default async function MatchDayDetailPage({
       </div>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-bold">試合情報</h2>
-          <Link href={`/match-days/${id}/edit`} className="btn-secondary !py-1.5 text-sm">
-            試合日を編集
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <DuplicateMatchDayButton
+              matchDayId={id}
+              defaultDate={new Date(
+                matchDay.matchDate.getTime() + 7 * 24 * 60 * 60 * 1000
+              )
+                .toISOString()
+                .slice(0, 10)}
+            />
+            <Link href={`/match-days/${id}/edit`} className="btn-secondary !py-1.5 text-sm">
+              試合日を編集
+            </Link>
+          </div>
         </div>
         {matchDay.matches.map((m) => (
           <MatchEditForm
