@@ -48,10 +48,28 @@ export const CATEGORY_COLORS: Record<
   string,
   { badge: string; ring: string; hex: string }
 > = {
-  GK: { badge: "bg-amber-500 text-white", ring: "ring-amber-400", hex: "#f59e0b" },
-  DF: { badge: "bg-sky-600 text-white", ring: "ring-sky-400", hex: "#0284c7" },
-  MF: { badge: "bg-emerald-600 text-white", ring: "ring-emerald-400", hex: "#059669" },
-  FW: { badge: "bg-rose-600 text-white", ring: "ring-rose-400", hex: "#e11d48" },
+  GK: {
+    badge:
+      "bg-gradient-to-b from-amber-300 via-amber-400 to-amber-600 text-amber-950",
+    ring: "ring-amber-400",
+    hex: "#f59e0b",
+  },
+  DF: {
+    badge: "bg-gradient-to-b from-sky-400 via-sky-500 to-sky-700 text-white",
+    ring: "ring-sky-400",
+    hex: "#0284c7",
+  },
+  MF: {
+    badge:
+      "bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-700 text-white",
+    ring: "ring-emerald-400",
+    hex: "#059669",
+  },
+  FW: {
+    badge: "bg-gradient-to-b from-rose-400 via-rose-500 to-rose-700 text-white",
+    ring: "ring-rose-400",
+    hex: "#e11d48",
+  },
 };
 
 export function categoryOf(code: PositionCode): "GK" | "DF" | "MF" | "FW" {
