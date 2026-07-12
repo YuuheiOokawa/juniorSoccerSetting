@@ -24,12 +24,27 @@ model Player {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // 基本プロフィール
+  grade              Int? // 学年 (1〜6)
+  dominantFoot       String  @default("") // RIGHT / LEFT / BOTH / ""(未設定)
+  isCaptainCandidate Boolean @default(false)
+
+  // 能力値 (0=未設定, 1〜5)
+  stamina   Int @default(0) // 体力
+  technique Int @default(0) // 技術
+  speed     Int @default(0) // スピード
+  defense   Int @default(0) // 守備力
+  attack    Int @default(0) // 攻撃力
+
   positions         PlayerPosition[]
   matchDayPlayers   MatchDayPlayer[]
   lineupAssignments LineupAssignment[]
+  awards            PlayerAward[]
+  mvpVotes          MvpVote[]
 
   @@unique([jerseyNumber])
   @@index([isActive])
+  @@index([grade])
 }
 
 // ============================================================
@@ -83,6 +98,9 @@ model MatchDay {
   matches           Match[]
   generationSetting GenerationSetting?
   histories         GenerationHistory[]
+  awards            PlayerAward[]
+  mvpVotes          MvpVote[]
+  boardPosts        BoardPost[]
 
   @@index([matchDate])
 }
@@ -182,6 +200,55 @@ model GenerationSetting {
   presetType            String @default("FAIRNESS") // FAIRNESS / WIN / DEVELOPMENT / RANDOM
 
   matchDay MatchDay @relation(fields: [matchDayId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================
+// 表彰・投票・掲示板
+// ============================================================
+
+// 大会 (試合日) ごとの表彰 (優秀選手賞など)
+model PlayerAward {
+  id         String   @id @default(cuid())
+  matchDayId String
+  playerId   String
+  awardName  String   @default("優秀選手賞")
+  notes      String   @default("")
+  createdAt  DateTime @default(now())
+
+  matchDay MatchDay @relation(fields: [matchDayId], references: [id], onDelete: Cascade)
+  player   Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([matchDayId])
+  @@index([playerId])
+}
+
+// 優秀選手の匿名投票 (投票者の情報は保存しない)
+model MvpVote {
+  id         String   @id @default(cuid())
+  matchDayId String
+  playerId   String
+  createdAt  DateTime @default(now())
+
+  matchDay MatchDay @relation(fields: [matchDayId], references: [id], onDelete: Cascade)
+  player   Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([matchDayId])
+}
+
+// 掲示板 (学年別 / 試合日別)
+model BoardPost {
+  id         String   @id @default(cuid())
+  boardType  String // GRADE / MATCHDAY
+  grade      Int? // boardType=GRADE のとき 0(全体)〜6(学年)
+  matchDayId String? // boardType=MATCHDAY のとき対象の試合日
+  authorName String   @default("匿名")
+  body       String
+  createdAt  DateTime @default(now())
+
+  matchDay MatchDay? @relation(fields: [matchDayId], references: [id], onDelete: Cascade)
+
+  @@index([boardType, grade, createdAt])
+  @@index([matchDayId, createdAt])
 }
 
 model GenerationHistory {

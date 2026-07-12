@@ -88,7 +88,7 @@ export default async function MatchDayDetailPage({
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Link href={`/match-days/${id}/attendance`} className="btn-secondary">
           👥 参加設定
         </Link>
@@ -103,6 +103,12 @@ export default async function MatchDayDetailPage({
         </Link>
         <Link href={`/match-days/${id}/print`} className="btn-secondary">
           📋 メンバー表
+        </Link>
+        <Link href={`/match-days/${id}/awards`} className="btn-secondary">
+          🏆 優秀選手
+        </Link>
+        <Link href={`/match-days/${id}/board`} className="btn-secondary">
+          💬 掲示板
         </Link>
       </div>
 

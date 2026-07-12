@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [playerCount, nextMatchDay, recentMatchDays, slotCounts, players] =
+  const [playerCount, nextMatchDay, recentMatchDays, players] =
     await Promise.all([
       prisma.player.count({ where: { isActive: true } }),
       prisma.matchDay.findFirst({
@@ -25,17 +25,33 @@ export default async function DashboardPage() {
         take: 5,
         include: { _count: { select: { players: true, matches: true } } },
       }),
-      prisma.lineupAssignment.groupBy({
-        by: ["playerId"],
-        _count: { id: true },
-      }),
       prisma.player.findMany({
         where: { isActive: true },
         orderBy: { jerseyNumber: "asc" },
       }),
     ]);
 
-  const slotByPlayer = new Map(slotCounts.map((s) => [s.playerId, s._count.id]));
+  // 出場時間は大会 (試合日) 単位で管理する。
+  // ダッシュボードには編成のある直近の大会の出場時間を表示する。
+  const latestWithLineup = await prisma.matchDay.findFirst({
+    where: {
+      matches: { some: { periods: { some: { assignments: { some: {} } } } } },
+    },
+    orderBy: { matchDate: "desc" },
+    select: { id: true, matchDate: true, eventName: true },
+  });
+  const latestSlotCounts = latestWithLineup
+    ? await prisma.lineupAssignment.groupBy({
+        by: ["playerId"],
+        where: {
+          matchPeriod: { match: { matchDayId: latestWithLineup.id } },
+        },
+        _count: { id: true },
+      })
+    : [];
+  const slotByPlayer = new Map(
+    latestSlotCounts.map((s) => [s.playerId, s._count.id])
+  );
   const unconfirmed = recentMatchDays.filter(
     (d) => d.status !== "CONFIRMED" && d.status !== "NOT_GENERATED"
   );
@@ -134,7 +150,15 @@ export default async function DashboardPage() {
       </div>
 
       <div className="card">
-        <h2 className="font-bold">選手ごとの累計出場時間</h2>
+        <h2 className="font-bold">
+          直近の大会の出場時間
+          {latestWithLineup && (
+            <span className="ml-2 text-sm font-normal text-slate-500">
+              {latestWithLineup.matchDate.toLocaleDateString("ja-JP")}{" "}
+              {latestWithLineup.eventName}
+            </span>
+          )}
+        </h2>
         {players.length === 0 ? (
           <p className="mt-3 text-slate-400">
             <Link href="/players/new" className="text-emerald-700 underline">
