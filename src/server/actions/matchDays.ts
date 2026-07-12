@@ -179,6 +179,34 @@ export async function updateMatchDay(
   return { ok: true, id: matchDayId };
 }
 
+// フォーメーションのみを変更する (フォーメーション画面のセレクタから)
+export async function updateFormationAction(
+  matchDayId: string,
+  formationKey: string
+): Promise<ActionResult> {
+  const parsed = matchDaySchema.shape.formation.safeParse(formationKey);
+  if (!parsed.success) {
+    return { ok: false, error: "不正なフォーメーションです。" };
+  }
+
+  const matchDay = await prisma.matchDay.findUnique({ where: { id: matchDayId } });
+  if (!matchDay) return { ok: false, error: "試合日が見つかりません。" };
+  if (matchDay.status === "CONFIRMED") {
+    return {
+      ok: false,
+      error: "確定済みの編成はフォーメーションを変更できません。先に確定を解除してください。",
+    };
+  }
+
+  await prisma.matchDay.update({
+    where: { id: matchDayId },
+    data: { formation: parsed.data },
+  });
+
+  revalidatePath(`/match-days/${matchDayId}`);
+  return { ok: true };
+}
+
 export async function deleteMatchDay(matchDayId: string): Promise<ActionResult> {
   const existing = await prisma.matchDay.findUnique({ where: { id: matchDayId } });
   if (!existing) return { ok: false, error: "試合日が見つかりません。" };

@@ -23,26 +23,10 @@ export default async function FormationPage({
     bundle.players.map((mdp) => [mdp.playerId, mdp.player])
   );
 
-  const players = lineupPlayers.map((p) => {
-    const info = playerInfo.get(p.playerId);
-    // 能力値 (設定済み) の平均から総合値を算出 (99スケール)
-    const abilities = info
-      ? [info.stamina, info.technique, info.speed, info.defense, info.attack].filter(
-          (v) => v > 0
-        )
-      : [];
-    const overall =
-      abilities.length > 0
-        ? Math.round(
-            (abilities.reduce((a, b) => a + b, 0) / abilities.length) * 19.6
-          )
-        : null;
-    return {
-      ...p,
-      imageUrl: info?.imageUrl ?? null,
-      overall,
-    };
-  });
+  const players = lineupPlayers.map((p) => ({
+    ...p,
+    imageUrl: playerInfo.get(p.playerId)?.imageUrl ?? null,
+  }));
 
   const matches = bundle.matches.map((m) => ({
     id: m.id,
