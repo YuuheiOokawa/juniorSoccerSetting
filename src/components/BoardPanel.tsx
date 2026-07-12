@@ -4,7 +4,10 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { FORMATIONS, getFormation, type PositionCode } from "@/lib/constants";
 import { createBoardPost, deleteBoardPost } from "@/server/actions/community";
-import { FormationSnapshot } from "./FormationSnapshot";
+import {
+  FormationSnapshot,
+  type SnapshotAssignment,
+} from "./FormationSnapshot";
 
 export interface BoardPostItem {
   id: string;
@@ -12,12 +15,13 @@ export interface BoardPostItem {
   body: string;
   createdAt: string; // 表示用文字列
   formationKey?: string | null;
-  formationAssignments?: Partial<Record<string, string>> | null;
+  formationAssignments?: Partial<Record<string, SnapshotAssignment>> | null;
 }
 
 export interface BoardPlayerOption {
   playerId: string;
   label: string; // "背番号 名前"
+  imageUrl?: string | null;
 }
 
 // 掲示板の投稿一覧 + 投稿フォーム (学年別・試合日別で共用)
@@ -44,12 +48,24 @@ export function BoardPanel({
   // フォーメーション案の添付
   const [attachFormation, setAttachFormation] = useState(false);
   const [formationKey, setFormationKey] = useState("3-3-1");
-  const [assignments, setAssignments] = useState<Partial<Record<string, string>>>({});
+  const [assignments, setAssignments] = useState<
+    Partial<Record<string, { playerId: string; label: string }>>
+  >({});
   const formation = getFormation(formationKey);
+  const playerById = new Map(players.map((p) => [p.playerId, p]));
 
-  const assignedNames = Object.fromEntries(
-    Object.entries(assignments).filter(([, v]) => v && v.length > 0)
-  );
+  // 送信・保存用 (選手IDと表示名)
+  const assignedEntries = Object.fromEntries(
+    Object.entries(assignments).filter(([, v]) => v && v.label)
+  ) as Record<string, { playerId: string; label: string }>;
+  // プレビュー用 (顔写真付き)
+  const previewAssignments: Partial<Record<string, SnapshotAssignment>> =
+    Object.fromEntries(
+      Object.entries(assignedEntries).map(([code, v]) => [
+        code,
+        { label: v.label, imageUrl: playerById.get(v.playerId)?.imageUrl ?? null },
+      ])
+    );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +78,7 @@ export function BoardPanel({
         authorName,
         body,
         formationKey: attachFormation ? formationKey : null,
-        formationAssignments: attachFormation ? assignedNames : null,
+        formationAssignments: attachFormation ? assignedEntries : null,
       });
       if (result.ok) {
         setBody("");
@@ -147,18 +163,21 @@ export function BoardPanel({
                   <label key={code} className="text-xs">
                     <span className="font-mono font-bold">{code}</span>
                     <select
-                      value={assignments[code] ?? ""}
-                      onChange={(e) =>
+                      value={assignments[code]?.playerId ?? ""}
+                      onChange={(e) => {
+                        const selected = playerById.get(e.target.value);
                         setAssignments((prev) => ({
                           ...prev,
-                          [code as PositionCode]: e.target.value,
-                        }))
-                      }
+                          [code as PositionCode]: selected
+                            ? { playerId: selected.playerId, label: selected.label }
+                            : undefined,
+                        }));
+                      }}
                       className="input mt-0.5 !py-1 text-xs"
                     >
                       <option value="">未定</option>
                       {players.map((p) => (
-                        <option key={p.playerId} value={p.label}>
+                        <option key={p.playerId} value={p.playerId}>
                           {p.label}
                         </option>
                       ))}
@@ -171,7 +190,7 @@ export function BoardPanel({
             {/* プレビュー */}
             <FormationSnapshot
               formationKey={formationKey}
-              assignments={assignedNames}
+              assignments={previewAssignments}
             />
           </div>
         )}

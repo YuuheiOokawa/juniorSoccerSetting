@@ -4,16 +4,31 @@ import {
   getFormation,
   type PositionCode,
 } from "@/lib/constants";
+import { PlayerAvatar } from "./PlayerAvatar";
+
+// 割り当て情報: 旧形式 (表示名のみ) と新形式 (選手情報付き) の両方に対応
+export type SnapshotAssignment =
+  | string
+  | { label: string; imageUrl?: string | null };
+
+function normalize(
+  value: SnapshotAssignment | undefined
+): { label: string; imageUrl: string | null } | null {
+  if (!value) return null;
+  if (typeof value === "string") return { label: value, imageUrl: null };
+  if (!value.label) return null;
+  return { label: value.label, imageUrl: value.imageUrl ?? null };
+}
 
 // 掲示板投稿などに添付されたフォーメーション案の表示。
-// ミニコートの上にポジションチップ (+選手名) を配置する。
+// ミニコートの上にポジションバッジ + 選手ミニカード (顔写真付き) を配置する。
 export function FormationSnapshot({
   formationKey,
   assignments = {},
   className = "",
 }: {
   formationKey: string;
-  assignments?: Partial<Record<string, string>>;
+  assignments?: Partial<Record<string, SnapshotAssignment>>;
   className?: string;
 }) {
   const formation = getFormation(formationKey);
@@ -24,7 +39,7 @@ export function FormationSnapshot({
         ⚽ {formation.label}
       </div>
       <div
-        className="relative aspect-[3/4] w-full max-w-[280px] overflow-hidden rounded-xl shadow ring-2 ring-slate-900/40"
+        className="relative aspect-[3/4] w-full max-w-[300px] overflow-hidden rounded-xl shadow ring-2 ring-slate-900/40"
         style={{
           background: "linear-gradient(to bottom, #3fae52, #1c6e30)",
         }}
@@ -46,21 +61,36 @@ export function FormationSnapshot({
           const pos = formation.layout[code as PositionCode];
           if (!pos) return null;
           const colors = CATEGORY_COLORS[categoryOf(code as PositionCode)];
-          const name = assignments[code];
+          const player = normalize(assignments[code]);
           return (
             <div
               key={code}
               className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
               style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
             >
-              <span
-                className={`rounded px-1 py-0.5 text-[9px] font-black leading-none shadow ring-1 ring-white/60 ${colors.badge}`}
-              >
-                {code}
-              </span>
-              {name && (
-                <span className="mt-0.5 max-w-[74px] truncate rounded bg-black/60 px-1 py-0.5 text-[10px] font-bold leading-none text-white">
-                  {name}
+              {player ? (
+                // 選手ミニカード (顔写真 + 名前)
+                <div className="relative flex flex-col items-center rounded-lg bg-gradient-to-b from-slate-700 to-black px-1 pb-0.5 pt-1 shadow ring-1 ring-white/30">
+                  <span
+                    className={`absolute -left-1 -top-1.5 rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ring-white/60 ${colors.badge}`}
+                  >
+                    {code}
+                  </span>
+                  <PlayerAvatar
+                    imageUrl={player.imageUrl}
+                    name={player.label.replace(/^\d+\s*/, "") || player.label}
+                    size={24}
+                    className={`ring-1 ${colors.ring}`}
+                  />
+                  <span className="mt-0.5 max-w-[64px] truncate text-[9px] font-bold leading-none text-white">
+                    {player.label}
+                  </span>
+                </div>
+              ) : (
+                <span
+                  className={`rounded px-1 py-0.5 text-[9px] font-black leading-none shadow ring-1 ring-white/60 ${colors.badge}`}
+                >
+                  {code}
                 </span>
               )}
             </div>

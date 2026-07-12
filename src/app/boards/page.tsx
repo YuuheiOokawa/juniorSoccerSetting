@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { BoardPanel } from "@/components/BoardPanel";
+import { resolvePostFormations } from "@/server/boardData";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +18,19 @@ export default async function BoardsPage({
   const { g } = await searchParams;
   const grade = Math.min(6, Math.max(0, Number(g ?? 0) || 0));
 
-  const posts = await prisma.boardPost.findMany({
-    where: { boardType: "GRADE", grade },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  const [posts, allPlayers] = await Promise.all([
+    prisma.boardPost.findMany({
+      where: { boardType: "GRADE", grade },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
+    prisma.player.findMany({
+      where: { isActive: true },
+      orderBy: { jerseyNumber: "asc" },
+      select: { id: true, name: true, jerseyNumber: true, imageUrl: true },
+    }),
+  ]);
+  const formationsByPost = await resolvePostFormations(posts);
 
   return (
     <div className="space-y-4">
@@ -49,6 +58,11 @@ export default async function BoardsPage({
       <BoardPanel
         boardType="GRADE"
         grade={grade}
+        players={allPlayers.map((p) => ({
+          playerId: p.id,
+          label: `${p.jerseyNumber} ${p.name}`,
+          imageUrl: p.imageUrl,
+        }))}
         posts={posts.map((p) => ({
           id: p.id,
           authorName: p.authorName,
@@ -60,9 +74,7 @@ export default async function BoardsPage({
             minute: "2-digit",
           }),
           formationKey: p.formationKey,
-          formationAssignments: p.formationData
-            ? (JSON.parse(p.formationData) as Record<string, string>)
-            : null,
+          formationAssignments: formationsByPost.get(p.id) ?? null,
         }))}
       />
     </div>
